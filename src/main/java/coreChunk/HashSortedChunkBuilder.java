@@ -2,8 +2,7 @@ package coreChunk;
 
 import hashFunc.Hasher;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
@@ -58,9 +57,9 @@ public class HashSortedChunkBuilder {
         long t2 = System.currentTimeMillis();
         System.out.println("✅ Хэши сгенерированы за " + (t2 - t1) / 1000.0 + " сек");
 
-        System.out.println("🔃 Сортировка...");
+        System.out.println("🚀 Быстрая сортировка (QuickSort)...");
         long t3 = System.currentTimeMillis();
-        Arrays.sort(chunkEntries, (a, b) -> compareHashes(a.hash, b.hash));
+        quickSort(chunkEntries, 0, chunkEntries.length - 1);
         long t4 = System.currentTimeMillis();
         System.out.println("✅ Отсортировано за " + (t4 - t3) / 1000.0 + " сек");
 
@@ -73,11 +72,17 @@ public class HashSortedChunkBuilder {
 
         System.out.println("💾 Сохранение в: " + outPath.toAbsolutePath());
         long t5 = System.currentTimeMillis();
-        try (OutputStream os = Files.newOutputStream(outPath)) {
+
+        // ⚡ Ускоренная запись с буфером 16 МБ
+        try (BufferedOutputStream os = new BufferedOutputStream(
+                Files.newOutputStream(outPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE),
+                16 * 1024 * 1024 // 16 МБ буфер
+        )) {
             for (Entry e : chunkEntries) {
                 os.write(e.raw);
             }
         }
+
         long t6 = System.currentTimeMillis();
         System.out.println("✅ Записано за " + (t6 - t5) / 1000.0 + " сек");
 
@@ -105,6 +110,44 @@ public class HashSortedChunkBuilder {
             if (ai != bi) return Integer.compare(ai, bi);
         }
         return Integer.compare(a.length, b.length);
+    }
+
+    private int compareRaw(byte[] a, byte[] b) {
+        for (int i = 0; i < elementSize; i++) {
+            int ai = a[i] & 0xFF;
+            int bi = b[i] & 0xFF;
+            if (ai != bi) return Integer.compare(ai, bi);
+        }
+        return 0;
+    }
+
+    private void quickSort(Entry[] arr, int low, int high) {
+        if (low < high) {
+            int pi = partition(arr, low, high);
+            quickSort(arr, low, pi - 1);
+            quickSort(arr, pi + 1, high);
+        }
+    }
+
+    private int partition(Entry[] arr, int low, int high) {
+        Entry pivot = arr[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            int cmp = compareHashes(arr[j].hash, pivot.hash);
+            if (cmp < 0 || (cmp == 0 && compareRaw(arr[j].raw, pivot.raw) <= 0)) {
+                i++;
+                Entry temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+        }
+
+        Entry temp = arr[i + 1];
+        arr[i + 1] = arr[high];
+        arr[high] = temp;
+
+        return i + 1;
     }
 
     private static class Entry {

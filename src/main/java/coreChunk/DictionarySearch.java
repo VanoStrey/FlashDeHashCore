@@ -16,7 +16,7 @@ public class DictionarySearch {
     private String dictionaryDir;
     private ChunkValueEncoding converter;
     private Hasher hasher;
-
+    private AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
 
     public DictionarySearch(String dictionaryDir) throws IOException {
         Path metadataPath = Paths.get(dictionaryDir, "metadata.json");
@@ -33,37 +33,60 @@ public class DictionarySearch {
         initChunkSearch();
     }
 
-
-
     public String search(String hash) throws InterruptedException {
+        if (hash.length() != 64){
+            return "invalid hash type";
+        }
         AtomicReference<String> foundResult = new AtomicReference<>();
+        AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
         ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         List<Future<?>> futures = new ArrayList<>();
 
-        for (HashBinarySearch searcher : hashBinarySearch) {
+        System.out.println("🔍 Начинаем поиск хеша: " + hash);
+
+        // Запускаем параллельные задачи для поиска в чанках
+        for (int i = 0; i < hashBinarySearch.size(); i++) {
+            final int index = i;
             futures.add(executor.submit(() -> {
-                if (foundResult.get() != null) return;
+                if (foundResult.get() != null) return; // Если результат уже найден, завершаем задачу
                 String result = null;
                 try {
-                    result = searcher.search(hash);
+                    result = hashBinarySearch.get(index).search(hash); // Ищем в чанке
+                    if (result != null && !result.isEmpty()) {
+                        foundResult.compareAndSet(null, result); // Сохраняем результат
+                        chunkIndex.compareAndSet(-1, index); // Сохраняем индекс чанка, где был найден хеш
+                        System.out.println("✅ Хеш найден в чанке: chunk_" + index + ".bin");
+                    }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                if (!result.isEmpty()) foundResult.compareAndSet(null, result);
             }));
         }
 
+        // Ждём завершения всех потоков
         for (Future<?> f : futures) {
             try {
-                f.get(); // 🔥 Именно тут может быть ExecutionException
+                f.get();
             } catch (ExecutionException e) {
-                e.printStackTrace(); // или залогируй по-своему
+                e.printStackTrace();
             }
         }
 
         executor.shutdown();
 
-        return foundResult.get() != null ? foundResult.get() : "hash not found";
+        // Проверка на успешный поиск и корректный индекс
+        if (foundResult.get() != null && chunkIndex.get() != -1) { // Если результат найден и индекс валиден
+            int currentChunkIndex = chunkIndex.get(); // Сохраняем текущий индекс
+            chunkIndex.set(-1); // Сбрасываем индекс чанка для следующего поиска
+            return foundResult.get() + "\n\n🔍 Found in chunk_" + currentChunkIndex + ".bin";
+        } else {
+            return "hash not found";  // Если хеш не найден, выводим это сообщение
+        }
+    }
+
+
+    public String getFoundChunkInfo() {
+        return "chunk_" + chunkIndex.get() + ".bin";  // Возвращаем название чанка
     }
 
     private void initChunkSearch() throws IOException {
@@ -98,7 +121,6 @@ public class DictionarySearch {
         System.out.println("✅ Система прогрета и готова к работе\n");
     }
 
-
     private List<Path> findAllChunkPaths() throws IOException {
         try (Stream<Path> stream = Files.list(Paths.get(dictionaryDir))) {
             return stream
@@ -111,5 +133,4 @@ public class DictionarySearch {
                     .toList();
         }
     }
-
 }

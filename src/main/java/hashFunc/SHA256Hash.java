@@ -19,19 +19,19 @@ public class SHA256Hash implements Hasher {
     public byte[] getBinHash(char[] chars, int offset, int length) {
         MessageDigest md = DIG.get();
         md.reset();
-        for (int i = offset, end = offset + length; i < end; i++) {
-            md.update((byte) chars[i]);
-        }
+        // Преобразуем весь массив chars в один вызов update
+        md.update(new String(chars, offset, length).getBytes());
         return md.digest();
     }
 
     @Override
     public byte[] hexToBytes(String hex) {
         int len = hex.length();
-        byte[] out = new byte[len/2];
+        byte[] out = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
-            out[i/2] = (byte)((Character.digit(hex.charAt(i),16)<<4)
-                    + Character.digit(hex.charAt(i+1),16));
+            int high = Character.digit(hex.charAt(i), 16) << 4;
+            int low = Character.digit(hex.charAt(i + 1), 16);
+            out[i / 2] = (byte) (high + low);
         }
         return out;
     }

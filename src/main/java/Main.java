@@ -15,47 +15,30 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        SHA256Hash sha256 = new SHA256Hash();
-        String dictionarySymbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:',.<>?/";
-        ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:',.<>?/");
-        String outputDir = "chuncks_SHA256_allSimbols";
+        String outputDir = "chuncks_SHA256_[A-Z][a-z][0-9]";
+
+        startTelegramBot(new DictionarySearch(outputDir));
 
 
         /*
+        SHA256Hash sha256 = new SHA256Hash();
+        String dictionarySymbols = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
+
         HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", sha256, chunkValueEncoding);
-        int threadCount = Runtime.getRuntime().availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-
-        for (int chunkIndex = 0; chunkIndex < 356; chunkIndex++) {
-            final int index = chunkIndex;
-            executor.submit(() -> {
-                try {
-                    builder.sortChunkToFile(outputDir, index);
-                } catch (IOException e) {
-                    System.err.println("Ошибка при обработке чанка " + index + ": " + e.getMessage());
-                }
-            });
+        for (int i = getMaxChunkIndex(outputDir) + 1; i < 3727; i++) {
+            int maxChunkIndex = getMaxChunkIndex(outputDir);
+            ChunkBinaryFileAccessor chunkBinaryFileAccessor = new ChunkBinaryFileAccessor(outputDir+"/chunk_"+ maxChunkIndex + ".bin");
+            System.out.println("Последняя комбинация в чанке " + maxChunkIndex + " : " +
+                    chunkValueEncoding.convertToBaseString(chunkBinaryFileAccessor.getElement(chunkBinaryFileAccessor.getTotalElements()-1)));
+            System.out.println("Максимальная комбинация в чанке " + maxChunkIndex + " : " +
+                    chunkValueEncoding.convertToBaseString(getMaxCombinationForChunk(maxChunkIndex)) + "\n\n");
+            builder.sortChunkToFile(outputDir, i);
         }
 
-        executor.shutdown();
-        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-        System.out.println("✅ Все чанки завершены");
-
-         */
-        Scanner scanner = new Scanner(System.in);
-        String baseDir = getParentDirectory(); // или "." если хочешь текущую
-        List<String> availableFolders = listAllFolders(baseDir);
-
-        if (availableFolders.isEmpty()) {
-            System.out.println("❌ Нет доступных папок.");
-            return;
-        }
-
-        String selectedFolder = inputFolder(availableFolders);
-        outputDir = baseDir + File.separator + selectedFolder;
-
-        startTelegramBot(new DictionarySearch(outputDir));
+        */
     }
+
 
     private static void startTelegramBot(DictionarySearch dictionarySearch) {
         try {
@@ -106,6 +89,43 @@ public class Main {
         return Arrays.stream(dir.listFiles(File::isDirectory))
                 .map(File::getName)
                 .collect(Collectors.toList());
+    }
+
+
+
+    public static int getMaxChunkIndex(String folderPath) {
+        File folder = new File(folderPath);
+        if (!folder.exists() || !folder.isDirectory()) {
+            throw new IllegalArgumentException("Папка не существует: " + folder.getAbsolutePath());
+        }
+
+        int maxIndex = -1;
+        for (String name : folder.list()) {
+            if (name.startsWith("chunk_") && name.endsWith(".bin")) {
+                try {
+                    String numberPart = name.substring(6, name.length() - 4);
+                    int index = Integer.parseInt(numberPart);
+                    if (index > maxIndex) {
+                        maxIndex = index;
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Пропускаем, если имя невалидно
+                }
+            }
+        }
+
+        return maxIndex;
+    }
+
+    public static byte[] getMaxCombinationForChunk(int chunkIndex) {
+        byte[] result = new byte[6];
+        result[0] = (byte) ((chunkIndex >> 16) & 0xFF);
+        result[1] = (byte) ((chunkIndex >> 8) & 0xFF);
+        result[2] = (byte) (chunkIndex & 0xFF);
+        result[3] = (byte) 0xFF;
+        result[4] = (byte) 0xFF;
+        result[5] = (byte) 0xFF;
+        return result;
     }
 
 }
