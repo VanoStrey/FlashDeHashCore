@@ -3,14 +3,61 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.json.JSONObject;
+
+import java.io.*;
 
 public class TelegramBot extends TelegramLongPollingBot {
-    private static final String BOT_USERNAME = "";
-    private static final String BOT_TOKEN = "";
+    private static String BOT_USERNAME;
+    private static String BOT_TOKEN;
     private static DictionarySearch dictionarySearch;
 
-    public TelegramBot(DictionarySearch dictionarySearch){
-        this.dictionarySearch = dictionarySearch;
+    public TelegramBot(DictionarySearch dictionarySearch) {
+        TelegramBot.dictionarySearch = dictionarySearch;
+        loadOrCreateBotConfig();
+    }
+
+    private void loadOrCreateBotConfig() {
+        File configFile = new File("bot_config.json");
+
+        if (!configFile.exists()) {
+            System.out.println("❗ Конфигурационный файл bot_config.json не найден.");
+            System.out.println("📄 Создаю шаблон...");
+
+            JSONObject template = new JSONObject();
+            template.put("token", "ВСТАВЬ_СЮДА_ТОКЕН");
+            template.put("username", "ВСТАВЬ_СЮДА_ИМЯ_БОТА");
+
+            try (FileWriter writer = new FileWriter(configFile)) {
+                writer.write(template.toString(4));
+                System.out.println("✅ Файл bot_config.json создан. Пожалуйста, открой его и вставь данные.");
+            } catch (IOException e) {
+                System.err.println("❌ Ошибка при создании bot_config.json: " + e.getMessage());
+            }
+
+            System.exit(1);
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(configFile))) {
+            StringBuilder jsonContent = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                jsonContent.append(line);
+            }
+
+            JSONObject json = new JSONObject(jsonContent.toString());
+            BOT_TOKEN = json.getString("token");
+            BOT_USERNAME = json.getString("username");
+
+            if (BOT_TOKEN.contains("ВСТАВЬ") || BOT_USERNAME.contains("ВСТАВЬ")) {
+                System.out.println("⚠️ Пожалуйста, заполните bot_config.json перед запуском бота.");
+                System.exit(1);
+            }
+
+        } catch (IOException e) {
+            System.err.println("❌ Ошибка при чтении bot_config.json: " + e.getMessage());
+            System.exit(1);
+        }
     }
 
     @Override
@@ -28,42 +75,40 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String chatId = update.getMessage().getChatId().toString();
             String messageText = update.getMessage().getText();
+
             if (messageText.equalsIgnoreCase("/status")) {
-                String status = getStatusMessage();
-                sendResponse(chatId, status);
+                sendResponse(chatId, getStatusMessage());
                 return;
             }
 
             if (messageText.equalsIgnoreCase("/start")) {
                 sendResponse(chatId,
-                        "❗ Made by @VanoStrey ❗\n\n" +
-                                "This is a prototype program. Right now, the set of characters in combinations is limited, " +
-                                "but the algorithm supports any custom alphabet and hash function.\n\n" +
-                                "The project demonstrates the power of instant hash cracking using a precomputed binary dictionary.");
+                        "❗ Сделано @VanoStrey ❗\n\n" +
+                                "Это прототип программы. Пока что набор символов ограничен, " +
+                                "но алгоритм поддерживает любые алфавиты и хеш-функции.\n\n" +
+                                "Проект демонстрирует возможности моментального подбора хеша с использованием бинарного словаря.");
 
                 sendResponse(chatId,
-                        "👋 Hi! Send me the hash — and I'll crack it right away 😈😈😈\n\n" +
-                                "Supported algorithm: SHA-256\n\n" +
-                                "Dictionary alphabet:  [A-Z][a-z][0-9]\n\n" +
-                                "The dictionary includes *all* combinations from 1 to 6 characters.\n" +
-                                "That's a total of 57,731,386,986 unique combinations.\n\n" +
-                                "Ready when you are 🔥");
-
+                        "👋 Привет! Отправь мне хеш — и я сразу же его взломаю 😈😈😈\n\n" +
+                                "Поддерживаемый алгоритм: SHA-256\n\n" +
+                                "Алфавит словаря: [A-Z][a-z][0-9]\n\n" +
+                                "Словарь содержит *все* комбинации длиной от 1 до 6 символов.\n" +
+                                "Всего 57 731 386 986 уникальных комбинаций.\n\n" +
+                                "Готов к работе 🔥");
                 return;
-            } else {
-                long startTime = System.currentTimeMillis();
-                String result = null;
-                try {
-                    result = dictionarySearch.search(messageText);  // Получаем результат поиска
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                long endTime = System.currentTimeMillis();
-
-                // Отправляем три отдельных сообщения
-                sendResponse(chatId, result);  // Результат хеша
-                sendResponse(chatId, "⏳ Time : " + (endTime - startTime) + " ms");  // Время поиска
             }
+
+            long startTime = System.currentTimeMillis();
+            String result;
+            try {
+                result = dictionarySearch.search(messageText);
+            } catch (InterruptedException e) {
+                result = "❌ Ошибка: " + e.getMessage();
+            }
+            long endTime = System.currentTimeMillis();
+
+            sendResponse(chatId, result);
+            sendResponse(chatId, "⏳ Время подбора: " + (endTime - startTime) + " мс");
         }
     }
 
@@ -84,11 +129,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         long totalMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024);
         String os = System.getProperty("os.name");
 
-        return "📊 *System Status*\n"
-                + "💽 OS: " + os + "\n"
-                + "🧠 Max RAM for JVM: " + totalMemoryMB + " MB\n"
-                + "🧵 CPU Cores: " + availableProcessors + "\n"
-                + "📦 Storage used: 187.6 GB (NVMe)\n";
+        return "📊 *Системный статус*\n" +
+                "💽 Операционная система: " + os + "\n" +
+                "🧠 Память для JVM: " + totalMemoryMB + " МБ\n" +
+                "🧵 Ядер процессора: " + availableProcessors + "\n" +
+                "📦 Размер словаря: 187.6 ГБ (NVMe)";
     }
-
 }

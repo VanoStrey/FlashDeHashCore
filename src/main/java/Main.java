@@ -15,28 +15,62 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        String outputDir = "chuncks_SHA256_[A-Z][a-z][0-9]";
-
-        startTelegramBot(new DictionarySearch(outputDir));
 
 
-        /*
+
+        startTelegramBot(new DictionarySearch(selectDictionaryFolder()));/*
+        String outputDir = "chuncks_SHA256_[0-9]";
         SHA256Hash sha256 = new SHA256Hash();
-        String dictionarySymbols = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        String dictionarySymbols = "0123456789";
         ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
 
         HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", sha256, chunkValueEncoding);
-        for (int i = getMaxChunkIndex(outputDir) + 1; i < 3727; i++) {
+        for (int i = getMaxChunkIndex(outputDir) + 1; i < 600; i++) {
+            builder.sortChunkToFile(outputDir, i);
             int maxChunkIndex = getMaxChunkIndex(outputDir);
             ChunkBinaryFileAccessor chunkBinaryFileAccessor = new ChunkBinaryFileAccessor(outputDir+"/chunk_"+ maxChunkIndex + ".bin");
             System.out.println("Последняя комбинация в чанке " + maxChunkIndex + " : " +
                     chunkValueEncoding.convertToBaseString(chunkBinaryFileAccessor.getElement(chunkBinaryFileAccessor.getTotalElements()-1)));
             System.out.println("Максимальная комбинация в чанке " + maxChunkIndex + " : " +
                     chunkValueEncoding.convertToBaseString(getMaxCombinationForChunk(maxChunkIndex)) + "\n\n");
-            builder.sortChunkToFile(outputDir, i);
+        }
+        startTelegramBot(new DictionarySearch(outputDir));
+        /*
+        */
+    }
+
+
+    public static String selectDictionaryFolder() {
+        File currentDir = new File(".");
+        File[] directories = currentDir.listFiles(File::isDirectory);
+
+        if (directories == null || directories.length == 0) {
+            System.out.println("❌ В текущей папке не найдено ни одной директории.");
+            return null;
         }
 
-        */
+        System.out.println("📁 Доступные словари:");
+        for (int i = 0; i < directories.length; i++) {
+            System.out.println("[" + i + "] " + directories[i].getName());
+        }
+
+        System.out.print("\n🔢 Введите номер нужной папки: ");
+        Scanner scanner = new Scanner(System.in);
+        int choice;
+
+        while (true) {
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+                if (choice >= 0 && choice < directories.length) break;
+                System.out.print("❗ Неверный номер, попробуйте ещё раз: ");
+            } catch (NumberFormatException e) {
+                System.out.print("❗ Введите корректный номер: ");
+            }
+        }
+
+        String selected = directories[choice].getName();
+        System.out.println("✅ Вы выбрали: " + selected);
+        return selected;
     }
 
 
