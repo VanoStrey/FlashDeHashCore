@@ -1,5 +1,5 @@
-import hashFunc.*;
 import coreChunk.*;
+import hashFunc.*;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -18,14 +18,14 @@ public class Main {
 
 
 
-        startTelegramBot(new DictionarySearch(selectDictionaryFolder()));/*
-        String outputDir = "chuncks_SHA256_[0-9]";
-        SHA256Hash sha256 = new SHA256Hash();
-        String dictionarySymbols = "0123456789";
-        ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
+        //startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));/*
+        String outputDir = "chunks_MD5_[A-Z][a-z][0-9][!-~]";
+        Hasher hasher = new MD5Hash();
+        String dictionarySymbols = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#$%&'()*+,-./:;﹤﹥=?@[\\]^_`{|}~";
 
-        HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", sha256, chunkValueEncoding);
-        for (int i = getMaxChunkIndex(outputDir) + 1; i < 600; i++) {
+        ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
+        HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", hasher, chunkValueEncoding);
+        for (int i = getMaxChunkIndex(outputDir) + 1; i < 461; i++) {
             builder.sortChunkToFile(outputDir, i);
             int maxChunkIndex = getMaxChunkIndex(outputDir);
             ChunkBinaryFileAccessor chunkBinaryFileAccessor = new ChunkBinaryFileAccessor(outputDir+"/chunk_"+ maxChunkIndex + ".bin");
@@ -34,7 +34,7 @@ public class Main {
             System.out.println("Максимальная комбинация в чанке " + maxChunkIndex + " : " +
                     chunkValueEncoding.convertToBaseString(getMaxCombinationForChunk(maxChunkIndex)) + "\n\n");
         }
-        startTelegramBot(new DictionarySearch(outputDir));
+        startTelegramBot(new DictionarySearch(outputDir, true));
         /*
         */
     }

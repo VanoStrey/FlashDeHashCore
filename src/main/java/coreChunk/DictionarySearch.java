@@ -12,13 +12,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 public class DictionarySearch {
-    private ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
+    public ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
     private String dictionaryDir;
-    private ChunkValueEncoding converter;
-    private Hasher hasher;
+    public ChunkValueEncoding converter;
+    public Hasher hasher;
     private AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
+    private  boolean printLog;
 
-    public DictionarySearch(String dictionaryDir) throws IOException {
+    public DictionarySearch(String dictionaryDir, boolean printLog) throws IOException {
         Path metadataPath = Paths.get(dictionaryDir, "metadata.json");
         String metadataContent = Files.readString(metadataPath);
         JSONObject meta = new JSONObject(metadataContent);
@@ -29,20 +30,22 @@ public class DictionarySearch {
         this.converter = new ChunkValueEncoding(symbols);
         this.hasher = HasherFactory.getHasher(hashAlg);
         this.dictionaryDir = dictionaryDir;
+        this.printLog = printLog;
 
         initChunkSearch();
     }
 
     public String search(String hash) throws InterruptedException {
-        if (hash.length() != 64){
-            return "invalid hash type";
+        if (hash.length() != hasher.getHash("12345").length()){
+            return "invalid hash type, use " + hasher.getName();
         }
         AtomicReference<String> foundResult = new AtomicReference<>();
         AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
         ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         List<Future<?>> futures = new ArrayList<>();
-
-        System.out.println("🔍 Начинаем поиск хеша: " + hash);
+        if (printLog){
+            System.out.println("🔍 Начинаем поиск хеша: " + hash);
+        }
 
         // Запускаем параллельные задачи для поиска в чанках
         for (int i = 0; i < hashBinarySearch.size(); i++) {
@@ -55,7 +58,9 @@ public class DictionarySearch {
                     if (result != null && !result.isEmpty()) {
                         foundResult.compareAndSet(null, result); // Сохраняем результат
                         chunkIndex.compareAndSet(-1, index); // Сохраняем индекс чанка, где был найден хеш
-                        System.out.println("✅ Хеш найден в чанке: chunk_" + index + ".bin");
+                        if (printLog){
+                            System.out.println("✅ Хеш найден в чанке: chunk_" + index + ".bin");
+                        }
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -78,7 +83,11 @@ public class DictionarySearch {
         if (foundResult.get() != null && chunkIndex.get() != -1) { // Если результат найден и индекс валиден
             int currentChunkIndex = chunkIndex.get(); // Сохраняем текущий индекс
             chunkIndex.set(-1); // Сбрасываем индекс чанка для следующего поиска
-            return foundResult.get() + "\n\n🔍 Found in chunk_" + currentChunkIndex + ".bin";
+            if (printLog){
+                return foundResult.get() + "\n\n🔍 Found in chunk_" + currentChunkIndex + ".bin";
+            } else {
+                return foundResult.get();
+            }
         } else {
             return "hash not found";  // Если хеш не найден, выводим это сообщение
         }

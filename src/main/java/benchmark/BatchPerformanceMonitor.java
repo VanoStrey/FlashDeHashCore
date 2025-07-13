@@ -13,20 +13,20 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class BatchPerformanceMonitor {
 
+    private static final String outputDir = "chunks_SHA256_[0-9]";
+    private static final int TEST_HASH_COUNT = 100;
+    private static final boolean printHashResult = true;
+    private static final int comboMaxLength = 10;
     private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
-    private static final int TEST_HASH_COUNT = 1000;
 
     public static void main(String[] args) throws Exception {
-        Hasher sha256 = new SHA256Hash();
-        ChunkValueEncoding encoder = new ChunkValueEncoding(
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:',.<>?/"
-        );
-        String outputDir = "chuncks_SHA256_allSimbols";
+        DictionarySearch dictionarySearch = new DictionarySearch(outputDir, false);
+        Hasher hasher = dictionarySearch.hasher;
+        String alphabet = dictionarySearch.converter.getRangeChars();
 
-        initChunkSearch(outputDir, encoder, sha256);
-        List<String> testHashes = generateTestHashes(sha256, encoder, TEST_HASH_COUNT);
-
+        List<String> testHashes = generateTestHashes(hasher, alphabet, TEST_HASH_COUNT);
+        System.out.println("⚙\uFE0F Хеши для тестирования сгенерированы\n");
         System.gc(); Thread.sleep(100);
         Runtime runtime = Runtime.getRuntime();
         ThreadMXBean tm = ManagementFactory.getThreadMXBean();
@@ -46,7 +46,10 @@ public class BatchPerformanceMonitor {
             long memBefore = runtime.totalMemory() - runtime.freeMemory();
             long start = System.nanoTime();
 
-            String result = crackSHA256(hash);
+            String result = dictionarySearch.search(hash);
+            if (printHashResult){
+                System.out.println(hash + ": " + result);
+            }
 
             long end = System.nanoTime();
             long memAfter = runtime.totalMemory() - runtime.freeMemory();
@@ -68,7 +71,6 @@ public class BatchPerformanceMonitor {
         System.out.println("\n📊 Средняя нагрузка при расшифровке " + TEST_HASH_COUNT + " хэшей:");
         System.out.println("⏱ Среднее время подбора: " + fmt.format(avgWall) + " мс");
         System.out.println("📉 Среднее RAM на хеш: " + fmt.format(avgRam) + " МБ");
-        System.out.println("🧠 Общее потребление RAM: " + fmt.format((memAfterAll - memBeforeAll) / 1024.0 / 1024) + " МБ");
 
         System.out.println("\n🔧 CPU-время по потокам:");
         for (long id : cpuAfter.keySet()) {
@@ -90,13 +92,13 @@ public class BatchPerformanceMonitor {
         System.out.printf("\n📂 Размер словаря: %.2f ГБ%n", totalSize / 1024.0 / 1024 / 1024);
     }
 
-    private static List<String> generateTestHashes(Hasher hasher, ChunkValueEncoding encoder, int count) {
+    private static List<String> generateTestHashes(Hasher hasher, String alphabet, int count) {
         List<String> hashes = new ArrayList<>();
-        Random rand = new Random(42);
-        String alphabet = encoder.getRangeChars();
+        Random rand = new Random(System.currentTimeMillis());
         for (int i = 0; i < count; i++) {
-            int len = 1 + rand.nextInt(5); // от 1 до 5 символов
+            int len = rand.nextInt(comboMaxLength);
             StringBuilder sb = new StringBuilder();
+            sb.append(alphabet.charAt(rand.nextInt(alphabet.length()-1) + 1));
             for (int j = 0; j < len; j++) {
                 sb.append(alphabet.charAt(rand.nextInt(alphabet.length())));
             }

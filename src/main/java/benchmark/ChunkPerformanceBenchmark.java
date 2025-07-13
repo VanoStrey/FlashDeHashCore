@@ -5,24 +5,26 @@ import coreChunk.ChunkValueEncoding;
 import coreChunk.HashBinarySearch;
 import hashFunc.Hasher;
 import hashFunc.SHA256Hash;
+import org.json.JSONObject;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.NumberFormat;
-import java.util.Locale;
+import java.nio.file.Paths;
 
 public class ChunkPerformanceBenchmark {
 
-    private static final String CHUNK_PATH = "chuncks_SHA256_allSimbols/chunk_0.bin";
-    private static final String DICTIONARY_PATH = "chuncks_SHA256_allSimbols";
-    private static final String RANGE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:',.<>?/";
+    private static final String DICTIONARY_PATH = "chunks_SHA256_[A-Z][a-z][0-9][!-~]";
 
     public static void main(String[] args) throws Exception {
+        Path metadataPath = Paths.get(DICTIONARY_PATH, "metadata.json");
+        String metadataContent = Files.readString(metadataPath);
+        JSONObject meta = new JSONObject(metadataContent);
 
-        ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(CHUNK_PATH);
-        ChunkValueEncoding encoder = new ChunkValueEncoding(RANGE_CHARS);
+        String symbols = meta.getString("dictionary_symbols");
+
+        ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(DICTIONARY_PATH+"/chunk_0.bin");
+        ChunkValueEncoding encoder = new ChunkValueEncoding(symbols);
         Hasher hasher = new SHA256Hash(); // Твоя реализация SHA256
 
         printSystemInfo(accessor);
@@ -44,7 +46,7 @@ public class ChunkPerformanceBenchmark {
         long totalSize = getFolderSize(DICTIONARY_PATH);
 
         System.out.println("📊 Техническая информация:");
-        System.out.printf("- Всего комбинаций: %,d%n", totalElements);
+        System.out.printf("- Всего комбинаций в chunk_0.bin: %,d%n", totalElements);
         System.out.printf("- Размер словаря: %.2f ГБ%n", totalSize / 1024.0 / 1024 / 1024);
         System.out.printf("- Размер одной записи: %d байт%n", 3);
         System.out.printf("- Кол-во логических ядер: %d%n", Runtime.getRuntime().availableProcessors());

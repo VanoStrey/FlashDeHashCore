@@ -83,17 +83,16 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             if (messageText.equalsIgnoreCase("/start")) {
                 sendResponse(chatId,
-                        "❗ Сделано @VanoStrey ❗\n\n" +
+                        "❗ Сделал @VanoStrey ❗\n\n" +
                                 "Это прототип программы. Пока что набор символов ограничен, " +
                                 "но алгоритм поддерживает любые алфавиты и хеш-функции.\n\n" +
                                 "Проект демонстрирует возможности моментального подбора хеша с использованием бинарного словаря.");
 
                 sendResponse(chatId,
-                        "👋 Привет! Отправь мне хеш — и я сразу же его взломаю 😈😈😈\n\n" +
-                                "Поддерживаемый алгоритм: SHA-256\n\n" +
-                                "Алфавит словаря: [A-Z][a-z][0-9]\n\n" +
-                                "Словарь содержит *все* комбинации длиной от 1 до 6 символов.\n" +
-                                "Всего 57 731 386 986 уникальных комбинаций.\n\n" +
+                        "👋 Привет! Отправь мне хеш — и я моментально его взломаю 😈😈😈\n\n" +
+                                "Поддерживаемый алгоритм: " + dictionarySearch.hasher.getName() + "\n\n" +
+                                "Алфавит словаря:\n\n" + dictionarySearch.converter.getRangeChars() + "\n\n" +
+                                "Всего " + formatNumber((long) (dictionarySearch.hashBinarySearch.size() * Math.pow(2, 24))) + " уникальных комбинаций.\n\n" +
                                 "Готов к работе 🔥");
                 return;
             }
@@ -111,6 +110,37 @@ public class TelegramBot extends TelegramLongPollingBot {
             sendResponse(chatId, "⏳ Время подбора: " + (endTime - startTime) + " мс");
         }
     }
+
+    public static String formatNumber(long number) {
+        // Преобразуем число в строку
+        String numberStr = String.valueOf(number);
+
+        // Создаем StringBuilder для результата
+        StringBuilder result = new StringBuilder();
+
+        // Обрабатываем справа налево
+        for (int i = numberStr.length() - 1, count = 0; i >= 0; i--) {
+            result.insert(0, numberStr.charAt(i));
+            count++;
+
+            // Добавляем точку после каждой группы из 3 цифр
+            if (count % 3 == 0 && i != 0) {
+                result.insert(0, ".");
+            }
+        }
+
+        return result.toString();
+    }
+
+    public static void main(String[] args) {
+        // Вычисляем количество комбинаций
+        long totalCombinations = (long) (dictionarySearch.hashBinarySearch.size() * Math.pow(2, 24));
+
+        // Форматируем и выводим результат
+        System.out.println("Всего " + formatNumber(totalCombinations) + " уникальных комбинаций.");
+    }
+
+
 
     private void sendResponse(String chatId, String text) {
         SendMessage message = new SendMessage();
