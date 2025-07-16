@@ -13,10 +13,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class BatchPerformanceMonitor {
 
-    private static final String outputDir = "chunks_SHA256_[0-9]";
+    private static final String outputDir = "chunks_SHA256_[A-Z][a-z][0-9]";
     private static final int TEST_HASH_COUNT = 100;
     private static final boolean printHashResult = true;
-    private static final int comboMaxLength = 10;
+    private static final int comboMaxLength = 6;
     private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
 

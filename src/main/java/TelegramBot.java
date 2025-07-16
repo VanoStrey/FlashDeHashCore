@@ -132,15 +132,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         return result.toString();
     }
 
-    public static void main(String[] args) {
-        // Вычисляем количество комбинаций
-        long totalCombinations = (long) (dictionarySearch.hashBinarySearch.size() * Math.pow(2, 24));
-
-        // Форматируем и выводим результат
-        System.out.println("Всего " + formatNumber(totalCombinations) + " уникальных комбинаций.");
-    }
-
-
 
     private void sendResponse(String chatId, String text) {
         SendMessage message = new SendMessage();

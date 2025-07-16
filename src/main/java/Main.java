@@ -5,6 +5,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -15,13 +16,13 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
+        String outdir = selectDictionaryFolder();
+        collisionDetection(outdir);
 
-
-
-        //startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));/*
+        startTelegramBot(new DictionarySearch(outdir, true));/*
         String outputDir = "chunks_MD5_[A-Z][a-z][0-9][!-~]";
-        Hasher hasher = new MD5Hash();
-        String dictionarySymbols = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#$%&'()*+,-./:;﹤﹥=?@[\\]^_`{|}~";
+        Hasher hasher = new SHA256Hash();
+        String dictionarySymbols = " \nABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#$%&'()*+,-./:;﹤﹥=?@[\\]^_`{|}~";
 
         ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
         HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", hasher, chunkValueEncoding);
@@ -71,6 +72,27 @@ public class Main {
         String selected = directories[choice].getName();
         System.out.println("✅ Вы выбрали: " + selected);
         return selected;
+    }
+
+    private static void collisionDetection(String outputDir) throws IOException, InterruptedException {
+        DictionarySearch dictionarySearch = new DictionarySearch(outputDir, false);
+        Hasher hasher = dictionarySearch.hasher;
+        int i = 4937000;
+        String hashBefore = "b879581972419dbc17e8d029f86c6c5f";
+        String result, hash;
+        while(true){
+            i++;
+            hash = hasher.getHash(hashBefore);
+            if(i % 1000 == 0){
+                System.out.println(i + "-" + hash);
+            }
+            result = dictionarySearch.search(hash);
+            if(result != "hash not found"){
+                System.out.println(i + "-" + hashBefore + "- " + result);
+                break;
+            }
+            hashBefore = hash;
+        }
     }
 
 
