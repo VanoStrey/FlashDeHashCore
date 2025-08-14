@@ -113,7 +113,7 @@ public class BatchPerformanceMonitor {
             String path = dictionaryDir + "/chunk_" + i + ".bin";
             if (!Files.exists(Path.of(path))) continue;
 
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path);
+            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path, 3);
             HashBinarySearch search = new HashBinarySearch(accessor, converter, sha256);
             hashSearches.add(search);
 

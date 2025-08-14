@@ -26,13 +26,14 @@ public class DictionarySearch {
 
         String symbols = meta.getString("dictionary_symbols");
         String hashAlg = meta.getString("hash_algorithm");
+        Integer elementSize = meta.getInt("element_size");
 
         this.converter = new ChunkValueEncoding(symbols);
         this.hasher = HasherFactory.getHasher(hashAlg);
         this.dictionaryDir = dictionaryDir;
         this.printLog = printLog;
 
-        initChunkSearch();
+        initChunkSearch(elementSize);
     }
 
     public String search(String hash) throws InterruptedException {
@@ -98,13 +99,13 @@ public class DictionarySearch {
         return "chunk_" + chunkIndex.get() + ".bin";  // Возвращаем название чанка
     }
 
-    private void initChunkSearch() throws IOException {
+    private void initChunkSearch(Integer elemetSize) throws IOException {
         System.out.println("🧠 Инициализация и прогрев чанков...");
 
         for (Path chunkPath : findAllChunkPaths()) {
             String path = chunkPath.toString();
 
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path);
+            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path, elemetSize);
             HashBinarySearch search = new HashBinarySearch(accessor, converter, hasher);
             hashBinarySearch.add(search);
 

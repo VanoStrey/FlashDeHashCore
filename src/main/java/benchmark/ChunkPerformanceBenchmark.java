@@ -23,7 +23,7 @@ public class ChunkPerformanceBenchmark {
 
         String symbols = meta.getString("dictionary_symbols");
 
-        ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(DICTIONARY_PATH+"/chunk_0.bin");
+        ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(DICTIONARY_PATH+"/chunk_0.bin", 3);
         ChunkValueEncoding encoder = new ChunkValueEncoding(symbols);
         Hasher hasher = new SHA256Hash(); // Твоя реализация SHA256
 

@@ -4,6 +4,7 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import javax.sound.midi.Soundbank;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -16,13 +17,23 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        String outdir = selectDictionaryFolder();
-        collisionDetection(outdir);
-
-        startTelegramBot(new DictionarySearch(outdir, true));/*
-        String outputDir = "chunks_MD5_[A-Z][a-z][0-9][!-~]";
         Hasher hasher = new SHA256Hash();
-        String dictionarySymbols = " \nABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#$%&'()*+,-./:;﹤﹥=?@[\\]^_`{|}~";
+        ChunkValueEncoding encoding = new ChunkValueEncoding("0123456789");
+
+        ChunkBinaryFileAccessor accessor0 = new ChunkBinaryFileAccessor("chunks4_SHA256_[0-9]/chunk_0.bin", 4);
+        ChunkBinaryFileAccessor accessor1 = new ChunkBinaryFileAccessor("chunks4_SHA256_[0-9]/chunk_1.bin", 4);
+        System.out.println(hasher.getHash(encoding.convertToBaseString(accessor0.getElement(accessor0.getTotalElements()- 1))));
+        System.out.println(hasher.getHash(encoding.convertToBaseString(accessor1.getElement(0))));
+
+        /*String outdir = selectDictionaryFolder();
+        menuApp(new DictionarySearch(outdir, true));
+
+
+        String outdir = selectDictionaryFolder();
+        startTelegramBot(new DictionarySearch(outdir, true));
+        String outputDir = "chunks_SHA256_[0-9]";
+        Hasher hasher = new SHA256Hash();
+        String dictionarySymbols = "0123456789";
 
         ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
         HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", hasher, chunkValueEncoding);
@@ -39,7 +50,6 @@ public class Main {
         /*
         */
     }
-
 
     public static String selectDictionaryFolder() {
         File currentDir = new File(".");
