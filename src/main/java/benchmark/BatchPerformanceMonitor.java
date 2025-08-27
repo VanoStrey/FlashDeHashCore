@@ -8,15 +8,13 @@ import java.lang.management.*;
 import java.nio.file.*;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class BatchPerformanceMonitor {
 
-    private static final String outputDir = "chunks_SHA256_[A-Z][a-z][0-9]";
-    private static final int TEST_HASH_COUNT = 100;
-    private static final boolean printHashResult = true;
-    private static final int comboMaxLength = 6;
+    private static final String outputDir = "chunks_SHA256_[0-9]";
+    private static final int TEST_HASH_COUNT = 1000;
+    private static final boolean printHashResult = false;
+    private static final int comboMaxLength = 10;
     private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
 
@@ -40,6 +38,7 @@ public class BatchPerformanceMonitor {
 
         double totalWall = 0;
         double totalRam = 0;
+        int lossHash = 0;
 
         for (String hash : testHashes) {
             System.gc(); Thread.sleep(1); // минимальная стабилизация
@@ -59,6 +58,7 @@ public class BatchPerformanceMonitor {
 
             totalWall += wallMs;
             totalRam += ramMb;
+            if (result.equals("hash not found")) lossHash++;
         }
 
         long wallEndAll = System.nanoTime();
@@ -68,6 +68,7 @@ public class BatchPerformanceMonitor {
         double avgWall = totalWall / TEST_HASH_COUNT;
         double avgRam = totalRam / TEST_HASH_COUNT;
 
+        System.out.println("\nНенайдено " + lossHash + " хешей");
         System.out.println("\n📊 Средняя нагрузка при расшифровке " + TEST_HASH_COUNT + " хэшей:");
         System.out.println("⏱ Среднее время подбора: " + fmt.format(avgWall) + " мс");
         System.out.println("📉 Среднее RAM на хеш: " + fmt.format(avgRam) + " МБ");
@@ -138,28 +139,5 @@ public class BatchPerformanceMonitor {
             if (time > 0) cpu.put(id, time);
         }
         return cpu;
-    }
-
-    private static String crackSHA256(String hash) throws InterruptedException {
-        AtomicReference<String> foundResult = new AtomicReference<>();
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        List<Future<?>> futures = new ArrayList<>();
-        for (HashBinarySearch searcher : hashSearches) {
-            futures.add(executor.submit(() -> {
-                if (foundResult.get() != null) return;
-                String result = null;
-                try {
-                    result = searcher.search(hash);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                if (!result.isEmpty()) foundResult.compareAndSet(null, result);
-            }));
-        }
-        for (Future<?> f : futures) {
-            try { f.get(); } catch (ExecutionException e) { e.printStackTrace(); }
-        }
-        executor.shutdown();
-        return foundResult.get() != null ? foundResult.get() : "not found";
     }
 }

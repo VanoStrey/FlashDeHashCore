@@ -97,17 +97,19 @@ public class TelegramBot extends TelegramLongPollingBot {
                 return;
             }
 
-            long startTime = System.currentTimeMillis();
+            long startTime = System.nanoTime(); // наносекунды
             String result;
             try {
                 result = dictionarySearch.search(messageText);
             } catch (InterruptedException e) {
                 result = "❌ Ошибка: " + e.getMessage();
             }
-            long endTime = System.currentTimeMillis();
+            long endTime = System.nanoTime();
 
             sendResponse(chatId, result);
-            sendResponse(chatId, "⏳ Время подбора: " + (endTime - startTime) + " мс");
+            double elapsedMs = (endTime - startTime) / 1_000_000.0;
+            sendResponse(chatId, String.format("⏳ Время подбора: %.2f мс", elapsedMs));
+
         }
     }
 

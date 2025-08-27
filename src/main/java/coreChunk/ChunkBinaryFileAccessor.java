@@ -3,7 +3,7 @@ package coreChunk;
 import java.io.*;
 
 public class ChunkBinaryFileAccessor implements AutoCloseable {
-    private static int ELEMENT_SIZE;
+    private int ELEMENT_SIZE;
 
     private final byte[] globalOffset;
     private final int globalOffsetLen;
@@ -20,6 +20,10 @@ public class ChunkBinaryFileAccessor implements AutoCloseable {
         this.raf = new RandomAccessFile(file, "r");
         long fileSize = raf.length();
         this.totalElements = fileSize / ELEMENT_SIZE;
+    }
+
+    public int getELEMENT_SIZE(){
+        return ELEMENT_SIZE;
     }
 
     private int extractChunkIndex(String path) {

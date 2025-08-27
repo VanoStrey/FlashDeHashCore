@@ -49,10 +49,6 @@ public class ChunkValueEncoding {
         return out.length - pos;
     }
 
-    /**
-     * Старый метод (контракт не меняется): возвращает строку,
-     * основанную на encodeToChars().
-     */
     public String convertToBaseString(byte[] value) {
         char[] buf = TL_CHARS.get();
         int len = encodeToChars(value, buf);

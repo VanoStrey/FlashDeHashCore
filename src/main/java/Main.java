@@ -1,3 +1,4 @@
+import benchmark.BatchPerformanceMonitor;
 import coreChunk.*;
 import hashFunc.*;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -6,6 +7,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import javax.sound.midi.Soundbank;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
@@ -17,30 +20,26 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        Hasher hasher = new SHA256Hash();
-        ChunkValueEncoding encoding = new ChunkValueEncoding("0123456789");
+        startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));
+        /*for (Long i = 1l; i < accessor.getTotalElements(); i++) {
+            byte[] hash1 = hasher.getBinHash(encoding.convertToBaseString(accessor.getElement(i - 1)));
+            byte[] hash2 = hasher.getBinHash(encoding.convertToBaseString(accessor.getElement(i)));
+            if (compareRaw(hash2, hash1) != 1){
+                bag++;
+                System.out.println(bag + " - " + i);
+            }
+        }
 
-        ChunkBinaryFileAccessor accessor0 = new ChunkBinaryFileAccessor("chunks4_SHA256_[0-9]/chunk_0.bin", 4);
-        ChunkBinaryFileAccessor accessor1 = new ChunkBinaryFileAccessor("chunks4_SHA256_[0-9]/chunk_1.bin", 4);
-        System.out.println(hasher.getHash(encoding.convertToBaseString(accessor0.getElement(accessor0.getTotalElements()- 1))));
-        System.out.println(hasher.getHash(encoding.convertToBaseString(accessor1.getElement(0))));
-
-        /*String outdir = selectDictionaryFolder();
-        menuApp(new DictionarySearch(outdir, true));
-
-
-        String outdir = selectDictionaryFolder();
-        startTelegramBot(new DictionarySearch(outdir, true));
-        String outputDir = "chunks_SHA256_[0-9]";
+        /*String outputDir = "chunks_SHA256_[0-9]";
         Hasher hasher = new SHA256Hash();
         String dictionarySymbols = "0123456789";
 
         ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
         HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", hasher, chunkValueEncoding);
-        for (int i = getMaxChunkIndex(outputDir) + 1; i < 461; i++) {
+        for (int i = getMaxChunkIndex(outputDir) + 1; i < 768; i++) {
             builder.sortChunkToFile(outputDir, i);
             int maxChunkIndex = getMaxChunkIndex(outputDir);
-            ChunkBinaryFileAccessor chunkBinaryFileAccessor = new ChunkBinaryFileAccessor(outputDir+"/chunk_"+ maxChunkIndex + ".bin");
+            ChunkBinaryFileAccessor chunkBinaryFileAccessor = new ChunkBinaryFileAccessor(outdir +"/chunk_" + maxChunkIndex + ".bin", 3);
             System.out.println("Последняя комбинация в чанке " + maxChunkIndex + " : " +
                     chunkValueEncoding.convertToBaseString(chunkBinaryFileAccessor.getElement(chunkBinaryFileAccessor.getTotalElements()-1)));
             System.out.println("Максимальная комбинация в чанке " + maxChunkIndex + " : " +
@@ -50,6 +49,18 @@ public class Main {
         /*
         */
     }
+
+    private static int compareRaw(byte[] a, byte[] b) {
+        for (int i = 0; i < a.length; i++) {
+            int ai = a[i] & 0xFF;
+            int bi = b[i] & 0xFF;
+            if (ai != bi) {
+                return Integer.compare(ai, bi);
+            }
+        }
+        return 0;
+    }
+
 
     public static String selectDictionaryFolder() {
         File currentDir = new File(".");
