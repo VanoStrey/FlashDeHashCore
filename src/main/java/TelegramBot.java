@@ -97,43 +97,34 @@ public class TelegramBot extends TelegramLongPollingBot {
                 return;
             }
 
-            long startTime = System.nanoTime(); // наносекунды
+            long startTime = nowNanos();
             String result;
             try {
                 result = dictionarySearch.search(messageText);
             } catch (InterruptedException e) {
                 result = "❌ Ошибка: " + e.getMessage();
             }
-            long endTime = System.nanoTime();
+            long endTime = nowNanos();
 
             sendResponse(chatId, result);
-            double elapsedMs = (endTime - startTime) / 1_000_000.0;
-            sendResponse(chatId, String.format("⏳ Время подбора: %.2f мс", elapsedMs));
-
+            String elapsedTime = formatElapsedTime(endTime - startTime);
+            sendResponse(chatId, "⏳ Время подбора: " + elapsedTime);
         }
     }
 
     public static String formatNumber(long number) {
-        // Преобразуем число в строку
         String numberStr = String.valueOf(number);
-
-        // Создаем StringBuilder для результата
         StringBuilder result = new StringBuilder();
 
-        // Обрабатываем справа налево
         for (int i = numberStr.length() - 1, count = 0; i >= 0; i--) {
             result.insert(0, numberStr.charAt(i));
             count++;
-
-            // Добавляем точку после каждой группы из 3 цифр
             if (count % 3 == 0 && i != 0) {
                 result.insert(0, ".");
             }
         }
-
         return result.toString();
     }
-
 
     private void sendResponse(String chatId, String text) {
         SendMessage message = new SendMessage();
@@ -157,5 +148,44 @@ public class TelegramBot extends TelegramLongPollingBot {
                 "🧠 Память для JVM: " + totalMemoryMB + " МБ\n" +
                 "🧵 Ядер процессора: " + availableProcessors + "\n" +
                 "📦 Размер словаря: 187.6 ГБ (NVMe)";
+    }
+
+    /**
+     * Универсальный таймер: на Android берём SystemClock.elapsedRealtimeNanos(),
+     * на обычной JVM — System.nanoTime().
+     */
+    private static long nowNanos() {
+        try {
+            Class<?> sysClock = Class.forName("android.os.SystemClock");
+            return (long) sysClock.getMethod("elapsedRealtimeNanos").invoke(null);
+        } catch (Exception e) {
+            return System.nanoTime();
+        }
+    }
+
+    /**
+     * Форматирует время:
+     * - для ПК: до 2 знаков после запятой (мс)
+     * - для Android: целое значение (мс)
+     */
+    private static String formatElapsedTime(long nanos) {
+        double elapsedMs = nanos / 1_000_000.0;
+
+        // Проверка, что мы на Android
+        if (isAndroid()) {
+            return String.format("%d мс", Math.round(elapsedMs)); // округляем до целых
+        } else {
+            return String.format("%.2f мс", elapsedMs); // точность до 2 знаков
+        }
+    }
+
+    private static boolean isAndroid() {
+        try {
+            // Если это Android, то класс android.os.SystemClock будет найден
+            Class.forName("android.os.SystemClock");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false; // Не Android
+        }
     }
 }

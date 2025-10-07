@@ -11,10 +11,10 @@ import java.util.*;
 
 public class BatchPerformanceMonitor {
 
-    private static final String outputDir = "chunks_SHA256_[0-9]";
-    private static final int TEST_HASH_COUNT = 1000;
+    private static final String outputDir = "chunks4_SHA256_[0-9]";
+    private static final int TEST_HASH_COUNT = 1-00;
     private static final boolean printHashResult = false;
-    private static final int comboMaxLength = 10;
+    private static final int comboMaxLength = 9;
     private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
 

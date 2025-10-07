@@ -6,10 +6,10 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import javax.sound.midi.Soundbank;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -20,7 +20,40 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));
+        ChunkValueEncoding encoding = new ChunkValueEncoding(" ae1ionrls02tmcy9hdu3b8kpg5476vjfwzxAEIONRLSqTMCDBYH!UPGK.JVF W*-#Z_XQ@$?<&,/;ñ'\\%+]=~[●)^(`:ๅ£\"ึçÑ>นภกถฟสหาุıคั่{}áóüดตพรวี้|´ßéöşงจยอะำืเแไ");
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get("rockyou.txt"))) {
+            String line;
+            int lineNumber = 0;
+            int maxBytes = 0;
+            int maxBytesLine;
+            String maxLine;
+
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+
+                // Пропускаем пустые строки
+                if (line.trim().isEmpty()) continue;
+
+                try {
+                    byte[] value = encoding.decodeFromString(line);
+                    if (line.equals(encoding.convertToBaseString(value))){
+                        //System.out.println("Строка №" + lineNumber + ": " + line.length() +
+                                //" символов -> " + value.length + " байт");
+                        if (value.length > maxBytes){
+                            maxBytes = value.length;
+                            maxBytesLine = lineNumber;
+                            maxLine = line;
+                            System.out.println(maxBytes + " " + maxBytesLine + " " + maxLine);
+                        }
+                    } else System.out.println("Строка №" + lineNumber + ": Некоректный перевод " + line);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Ошибка обработки строки №" + lineNumber + ": " + e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Ошибка чтения файла: " + e.getMessage());
+        }
+
         /*for (Long i = 1l; i < accessor.getTotalElements(); i++) {
             byte[] hash1 = hasher.getBinHash(encoding.convertToBaseString(accessor.getElement(i - 1)));
             byte[] hash2 = hasher.getBinHash(encoding.convertToBaseString(accessor.getElement(i)));
