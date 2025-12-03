@@ -5,12 +5,10 @@ import java.math.BigInteger;
 public class ChunkValueEncoding {
     private final String rangeChars;
     private final int base;
-    private final ThreadLocal<char[]> TL_CHARS;
 
     public ChunkValueEncoding(String rangeChars) {
         this.rangeChars = rangeChars;
         this.base = rangeChars.length();
-        this.TL_CHARS = ThreadLocal.withInitial(() -> new char[128]);
     }
 
     public String getRangeChars() {

@@ -42,8 +42,7 @@ public class ChunkBinaryFileAccessor implements AutoCloseable {
     public byte[] getElement(long index) throws IOException {
         if (index < 0 || index >= totalElements) return null;
 
-        long byteOffset = index * ELEMENT_SIZE;
-        raf.seek(byteOffset);
+        raf.seek(index * ELEMENT_SIZE);
 
         byte[] result = new byte[globalOffsetLen + ELEMENT_SIZE];
 

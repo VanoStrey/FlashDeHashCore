@@ -11,10 +11,10 @@ import java.util.*;
 
 public class BatchPerformanceMonitor {
 
-    private static final String outputDir = "chuncks_SHA256_[A-Z][a-z][0-9]";
-    private static final int TEST_HASH_COUNT = 100;
+    private static final String outputDir = "chunks_SHA256_[0-9]";
+    private static final int TEST_HASH_COUNT = 1000;
     private static final boolean printHashResult = false;
-    private static final int comboMaxLength = 5;
+    private static final int comboMaxLength = 10;
     private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
 
@@ -25,7 +25,8 @@ public class BatchPerformanceMonitor {
 
         List<String> testHashes = generateTestHashes(hasher, alphabet, TEST_HASH_COUNT);
         System.out.println("⚙\uFE0F Хеши для тестирования сгенерированы\n");
-        System.gc(); Thread.sleep(100);
+        System.gc();
+        Thread.sleep(100);
         Runtime runtime = Runtime.getRuntime();
         ThreadMXBean tm = ManagementFactory.getThreadMXBean();
         if (tm.isThreadCpuTimeSupported() && !tm.isThreadCpuTimeEnabled()) {

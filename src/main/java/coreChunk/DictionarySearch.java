@@ -13,11 +13,11 @@ import java.util.stream.Stream;
 
 public class DictionarySearch {
     public ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
-    private String dictionaryDir;
+    private final String dictionaryDir;
     public ChunkValueEncoding converter;
     public Hasher hasher;
-    private AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
-    private  boolean printLog;
+    private final AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
+    private final boolean printLog;
 
     public DictionarySearch(String dictionaryDir, boolean printLog) throws IOException {
         Path metadataPath = Paths.get(dictionaryDir, "metadata.json");
@@ -99,13 +99,13 @@ public class DictionarySearch {
         return "chunk_" + chunkIndex.get() + ".bin";  // Возвращаем название чанка
     }
 
-    private void initChunkSearch(Integer elemetSize) throws IOException {
+    private void initChunkSearch(Integer elementSize) throws IOException {
         System.out.println("🧠 Инициализация и прогрев чанков...");
 
         for (Path chunkPath : findAllChunkPaths()) {
             String path = chunkPath.toString();
 
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path, elemetSize);
+            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path, elementSize);
             HashBinarySearch search = new HashBinarySearch(accessor, converter, hasher);
             hashBinarySearch.add(search);
 
