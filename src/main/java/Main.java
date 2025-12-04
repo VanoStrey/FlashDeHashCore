@@ -20,7 +20,8 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        menuApp(new DictionarySearch(selectDictionaryFolder(), true));
+        startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));
+        /*menuApp(new DictionarySearch(selectDictionaryFolder(), true));
         ChunkValueEncoding encoding = new ChunkValueEncoding(" ae1ionrls02tmcy9hdu3b8kpg5476vjfwzxAEIONRLSqTMCDBYH!UPGK.JVF W*-#Z_XQ@$?<&,/;ñ'\\%+]=~[●)^(`:ๅ£\"ึçÑ>นภกถฟสหาุıคั่{}áóüดตพรวี้|´ßéöşงจยอะำืเแไ");
         try (BufferedReader reader = Files.newBufferedReader(Paths.get("rockyou.txt"))) {
             String line;

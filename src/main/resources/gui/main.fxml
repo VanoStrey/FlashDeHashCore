@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://xmlns.javafx.com/javafx/21"
+      xmlns:fx="http://xmlns.javafx.com/fxml/1"
+      fx:controller="gui.MainController"
+      spacing="10"
+      style="-fx-padding: 20;">
+
+    <Label text="Управление словарями" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+
+
+    <!-- Таблица словарей (columnResizePolicy задаётся в контроллере) -->
+    <TableView fx:id="dictionariesTable" prefHeight="300" minHeight="200"/>
+
+    <!-- Кнопки управления -->
+    <HBox spacing="10" alignment="CENTER">
+        <Button text="Добавить словарь" onAction="#addDictionary"/>
+        <Button text="Удалить словарь" onAction="#removeDictionary"/>
+        <Button text="Обновить список" onAction="#refreshDictionaries"/>
+        <Button text="Поиск в словаре" onAction="#openSearchWindow" fx:id="searchInDictBtn"/>
+    </HBox>
+</VBox>

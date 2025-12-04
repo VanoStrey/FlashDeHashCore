@@ -83,7 +83,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             if (messageText.equalsIgnoreCase("/start")) {
                 sendResponse(chatId,
-                        "❗ Сделал @VanoStrey ❗\n\n" +
+                        "❗ Сделал @foolvan ❗\n\n" +
                                 "Это прототип программы. Пока что набор символов ограничен, " +
                                 "но алгоритм поддерживает любые алфавиты и хеш-функции.\n\n" +
                                 "Проект демонстрирует возможности моментального подбора хеша с использованием бинарного словаря.");
