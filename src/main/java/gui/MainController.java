@@ -1,5 +1,10 @@
 package gui;
 
+import coreChunk.ChunkValueEncoding;
+import coreChunk.HashSortedChunkBuilder;
+import hashFunc.Hasher;
+import hashFunc.SHA256Hash;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -9,6 +14,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -23,7 +29,7 @@ public class MainController {
     @FXML
     private Button searchInDictBtn;
 
-    private final ObservableList<String> dictionaries = FXCollections.observableArrayList();
+    final ObservableList<String> dictionaries = FXCollections.observableArrayList();
     private final DictionaryStorage storage = new DictionaryStorage();
 
     @FXML
@@ -122,7 +128,27 @@ public class MainController {
         }
     }
 
+    @FXML
+    private void createDictionary() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/create_dictionary.fxml"));
+            Stage stage = new Stage();
+            stage.setScene(new Scene(loader.load()));
+            stage.setTitle("Создание словаря");
+            stage.setMinWidth(600);
+            stage.setMinHeight(400);
 
+            CreateDictionaryController controller = loader.getController();
+
+            controller.setMainController(this);
+            controller.setStage(stage);
+
+            stage.show();
+
+        } catch (IOException e) {
+            showAlert("Ошибка", "Не удалось открыть окно создания словаря: " + e.getMessage());
+        }
+    }
 
     private void showAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);

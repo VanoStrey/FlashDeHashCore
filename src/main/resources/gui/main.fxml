@@ -20,5 +20,6 @@
         <Button text="Удалить словарь" onAction="#removeDictionary"/>
         <Button text="Обновить список" onAction="#refreshDictionaries"/>
         <Button text="Поиск в словаре" onAction="#openSearchWindow" fx:id="searchInDictBtn"/>
+        <Button text="Создать словарь" onAction="#createDictionary"/>
     </HBox>
 </VBox>
