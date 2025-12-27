@@ -8,15 +8,13 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DictionarySearch {
     public ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
     private final String dictionaryDir;
     public ChunkValueEncoding converter;
     public Hasher hasher;
-    private final AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
     private final boolean printLog;
 
     public DictionarySearch(String dictionaryDir, boolean printLog) throws IOException {
@@ -34,73 +32,97 @@ public class DictionarySearch {
         this.printLog = printLog;
 
         initChunkSearch(elementSize);
+        
+        if (printLog) {
+            System.out.println("⚡ Оптимизация: одна интерполяция для всех чанков");
+        }
     }
 
     public String search(String hash) throws InterruptedException {
-        if (hash.length() != hasher.getHash("12345").length()){
+        if (hash.length() != hasher.getHash("12345").length()) {
             return "invalid hash type, use " + hasher.getName();
         }
-        AtomicReference<String> foundResult = new AtomicReference<>();
-        AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        List<Future<?>> futures = new ArrayList<>();
-        if (printLog){
-            System.out.println("🔍 Начинаем поиск хеша: " + hash);
+
+        byte[] target = hasher.hexToBytes(hash);
+        int totalChunks = hashBinarySearch.size();
+        
+        if (printLog) {
+            System.out.println("🔍 Поиск хеша: " + hash);
         }
 
-        // Запускаем параллельные задачи для поиска в чанках
-        for (int i = 0; i < hashBinarySearch.size(); i++) {
-            final int index = i;
-            futures.add(executor.submit(() -> {
-                if (foundResult.get() != null) return; // Если результат уже найден, завершаем задачу
-                String result = null;
-                try {
-                    result = hashBinarySearch.get(index).search(hash); // Ищем в чанке
-                    if (result != null && !result.isEmpty()) {
-                        foundResult.compareAndSet(null, result); // Сохраняем результат
-                        chunkIndex.compareAndSet(-1, index); // Сохраняем индекс чанка, где был найден хеш
-                        if (printLog){
-                            System.out.println("✅ Хеш найден в чанке: chunk_" + index + ".bin");
+        long startTime = System.nanoTime();
+        
+        try {
+            // 1. ВЫЧИСЛЯЕМ ПРЕДСКАЗАНИЕ ОДИН РАЗ (используем первый чанк как образец)
+            // Первый чанк уже имеет вычисленные lowHash и highHash
+            HashBinarySearch firstSearch = hashBinarySearch.get(0);
+            
+            // Вычисляем предсказание по формуле из HashBinarySearch.predictIndex()
+            long predicted = firstSearch.predictPosition(target);
+            
+            if (printLog) {
+                System.out.println("📍 Единое предсказание для всех чанков: " + predicted);
+            }
+
+            // 2. Параллельный поиск во всех чанках с ОДНИМ предсказанием
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            List<Future<SearchResult>> futures = new ArrayList<>();
+            AtomicBoolean found = new AtomicBoolean(false);
+            
+            for (int chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+                final int currentChunk = chunkIdx;
+                
+                futures.add(executor.submit(() -> {
+                    if (found.get()) return new SearchResult(currentChunk, "");
+                    
+                    try {
+                        // Используем метод с переданным предсказанием
+                        String result = hashBinarySearch.get(currentChunk).searchWithPrediction(hash, predicted);
+                        if (!result.isEmpty()) {
+                            found.set(true);
+                            return new SearchResult(currentChunk, result);
                         }
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    return new SearchResult(currentChunk, "");
+                }));
+            }
+            
+            executor.shutdown();
+            
+            // 3. Собираем результаты
+            for (Future<SearchResult> future : futures) {
+                try {
+                    SearchResult result = future.get();
+                    if (result != null && !result.result.isEmpty()) {
+                        long totalTime = System.nanoTime() - startTime;
+                        if (printLog) {
+                            System.out.println("✅ Найдено в чанке " + result.chunkIndex + 
+                                             " за " + (totalTime / 1_000_000.0) + " мс");
+                        }
+                        return result.result;
+                    }
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
                 }
-            }));
-        }
-
-        // Ждём завершения всех потоков
-        for (Future<?> f : futures) {
-            try {
-                f.get();
-            } catch (ExecutionException e) {
-                e.printStackTrace();
             }
+            
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
-        executor.shutdown();
-
-        // Проверка на успешный поиск и корректный индекс
-        if (foundResult.get() != null && chunkIndex.get() != -1) { // Если результат найден и индекс валиден
-            int currentChunkIndex = chunkIndex.get(); // Сохраняем текущий индекс
-            chunkIndex.set(-1); // Сбрасываем индекс чанка для следующего поиска
-            if (printLog){
-                return foundResult.get() + "\n\n🔍 Found in chunk_" + currentChunkIndex + ".bin";
-            } else {
-                return foundResult.get();
-            }
-        } else {
-            return "hash not found";  // Если хеш не найден, выводим это сообщение
+        
+        long totalTime = System.nanoTime() - startTime;
+        if (printLog) {
+            System.out.println("❌ Хеш не найден за " + (totalTime / 1_000_000.0) + " мс");
         }
-    }
-
-
-    public String getFoundChunkInfo() {
-        return "chunk_" + chunkIndex.get() + ".bin";  // Возвращаем название чанка
+        return "hash not found";
     }
 
     private void initChunkSearch(Integer elementSize) throws IOException {
-        System.out.println("🧠 Инициализация и прогрев чанков...");
+        if (printLog) {
+            System.out.println("🧠 Инициализация и прогрев чанков...");
+        }
 
         for (Path chunkPath : findAllChunkPaths()) {
             String path = chunkPath.toString();
@@ -122,17 +144,19 @@ public class DictionarySearch {
                 byte[] el = accessor.getElement(offset);
                 if (el == null) continue;
                 String encoded = converter.convertToBaseString(el);
-                byte[] hash = hasher.getBinHash(encoded);
-                hash[0] ^= el[0];
+                byte[] hashBytes = hasher.getBinHash(encoded);
+                hashBytes[0] ^= el[0]; // Фиктивная операция для прогрева
             }
         }
 
         System.gc();
-        System.out.println("✅ Система прогрета и готова к работе\n");
+        if (printLog) {
+            System.out.println("✅ Система прогрета и готова к работе\n");
+        }
     }
 
     private List<Path> findAllChunkPaths() throws IOException {
-        try (Stream<Path> stream = Files.list(Paths.get(dictionaryDir))) {
+        try (var stream = Files.list(Paths.get(dictionaryDir))) {
             return stream
                     .filter(path -> path.getFileName().toString().matches("chunk_\\d+\\.bin"))
                     .sorted(Comparator.comparingInt(p ->
@@ -141,6 +165,16 @@ public class DictionarySearch {
                                     .replace(".bin", "")))
                     )
                     .toList();
+        }
+    }
+
+    private static class SearchResult {
+        final int chunkIndex;
+        final String result;
+        
+        SearchResult(int chunkIndex, String result) {
+            this.chunkIndex = chunkIndex;
+            this.result = result;
         }
     }
 }

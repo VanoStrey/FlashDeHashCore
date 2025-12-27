@@ -28,15 +28,20 @@ public class HashBinarySearch {
         highHash = getHash(total - 1, buf);
     }
 
-    public String search(String targetHashHEX) throws IOException {
+    // Метод для вычисления предсказанной позиции (публичный)
+    public long predictPosition(byte[] target) throws IOException {
+        return predictIndex(0, total - 1, target, buf, accessor.getELEMENT_SIZE());
+    }
+
+    // Метод с переданным предсказанием (оптимизированный)
+    public String searchWithPrediction(String targetHashHEX, long predicted) throws IOException {
         if (total == 0) return "";
 
         byte[] target = hasher.hexToBytes(targetHashHEX);
-
-        long predicted = predictIndex(0, total - 1, target, buf, accessor.getELEMENT_SIZE());
-        long low  = Math.max(0, predicted - RANGE);
+        long low = Math.max(0, predicted - RANGE);
         long high = Math.min(total - 1, predicted + RANGE);
 
+        // БИНАРНЫЙ поиск в суженном диапазоне
         while (low <= high) {
             long mid = (low + high) >>> 1;
             byte[] elem = accessor.getElement(mid);
@@ -44,7 +49,7 @@ public class HashBinarySearch {
             byte[] hash = hasher.getBinHash(buf, buf.length - len, len);
 
             int cmp = compareHashes(hash, target);
-            if (cmp < 0)      low  = mid + 1;
+            if (cmp < 0)      low = mid + 1;
             else if (cmp > 0) high = mid - 1;
             else return new String(buf, buf.length - len, len);
         }

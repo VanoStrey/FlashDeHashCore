@@ -12,14 +12,14 @@ import java.util.*;
 public class BatchPerformanceMonitor {
 
     private static final String outputDir = "chunks_SHA256_[0-9]";
-    private static final int TEST_HASH_COUNT = 1000;
+    private static final int TEST_HASH_COUNT = 100;
     private static final boolean printHashResult = false;
     private static final int comboMaxLength = 10;
     private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
 
     public static void main(String[] args) throws Exception {
-        DictionarySearch dictionarySearch = new DictionarySearch(outputDir, false);
+        DictionarySearch dictionarySearch = new DictionarySearch(outputDir, true);
         Hasher hasher = dictionarySearch.hasher;
         String alphabet = dictionarySearch.converter.getRangeChars();
 
