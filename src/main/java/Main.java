@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import javax.sound.midi.Soundbank;
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -20,7 +21,17 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));
+
+        System.out.print("\nКонсоль или Телеграмм бот?(0/1): ");
+        Scanner scanner = new Scanner(System.in);
+        switch (Integer.parseInt(scanner.nextLine())){
+            case 0:
+                menuApp(new DictionarySearch(selectDictionaryFolder(), true));
+                break;
+            case 1:
+                startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));
+                break;
+        }
         /*menuApp(new DictionarySearch(selectDictionaryFolder(), true));
         ChunkValueEncoding encoding = new ChunkValueEncoding(" ae1ionrls02tmcy9hdu3b8kpg5476vjfwzxAEIONRLSqTMCDBYH!UPGK.JVF W*-#Z_XQ@$?<&,/;ñ'\\%+]=~[●)^(`:ๅ£\"ึçÑ>นภกถฟสหาุıคั่{}áóüดตพรวี้|´ßéöşงจยอะำืเแไ");
         try (BufferedReader reader = Files.newBufferedReader(Paths.get("rockyou.txt"))) {
@@ -130,28 +141,6 @@ public class Main {
         return selected;
     }
 
-    private static void collisionDetection(String outputDir) throws IOException, InterruptedException {
-        DictionarySearch dictionarySearch = new DictionarySearch(outputDir, false);
-        Hasher hasher = dictionarySearch.hasher;
-        int i = 4937000;
-        String hashBefore = "b879581972419dbc17e8d029f86c6c5f";
-        String result, hash;
-        while(true){
-            i++;
-            hash = hasher.getHash(hashBefore);
-            if(i % 1000 == 0){
-                System.out.println(i + "-" + hash);
-            }
-            result = dictionarySearch.search(hash);
-            if(result != "hash not found"){
-                System.out.println(i + "-" + hashBefore + "- " + result);
-                break;
-            }
-            hashBefore = hash;
-        }
-    }
-
-
     private static void startTelegramBot(DictionarySearch dictionarySearch) {
         try {
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
@@ -165,18 +154,18 @@ public class Main {
     private static void menuApp(DictionarySearch dictionarySearch) throws InterruptedException, ExecutionException {
         Scanner scanner = new Scanner(System.in);
         String hash, result;
-        long startTime, endTime;
+        double startTime, totalTime;
         while (true) {
             System.out.println("hash для расшифровки: ");
             hash = scanner.next();
 
-            startTime = System.currentTimeMillis();
+            startTime = System.nanoTime();
             result =  dictionarySearch.search(hash);
-            endTime = System.currentTimeMillis();
+            totalTime = System.nanoTime() - startTime;
 
 
             System.out.println("Результат: " + result);
-            System.out.println("Время выполнения: " + (endTime - startTime) + " милисекунд\n");
+            System.out.println("Время выполнения: " + String.format("%.2f", totalTime / 1_000_000.0) + " ms\n");
         }
     }
     public static String getParentDirectory() {
