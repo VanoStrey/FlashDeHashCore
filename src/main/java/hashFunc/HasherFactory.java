@@ -6,6 +6,10 @@ public class HasherFactory {
             case "SHA256" -> new SHA256Hash();
             case "MD5" -> new MD5Hash();
             case "SHA1" -> new SHA1Hash();
+            case "SHA3" -> new SHA3Hash();
+            case "BLAKE3" -> new BLAKE3Hash();
+            case "SHAKE128" -> new SHAKE128();
+            case "CSHAKE128" -> new CSHAKE128();
             default -> throw new IllegalArgumentException("⛔ Неизвестный алгоритм хеширования: " + name);
         };
     }

@@ -6,7 +6,7 @@ import java.security.NoSuchAlgorithmException;
 public class SHA1Hash implements Hasher {
     private static final ThreadLocal<MessageDigest> DIG =
             ThreadLocal.withInitial(() -> {
-                try { return MessageDigest.getInstance("SHA-1"); }
+                try { return MessageDigest.getInstance("SHA1"); }
                 catch (NoSuchAlgorithmException e) {
                     throw new IllegalStateException(e);
                 }

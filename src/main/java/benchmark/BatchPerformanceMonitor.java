@@ -5,24 +5,38 @@ import hashFunc.*;
 
 import java.io.IOException;
 import java.lang.management.*;
+import java.math.BigInteger;
 import java.nio.file.*;
 import java.text.DecimalFormat;
 import java.util.*;
 
 public class BatchPerformanceMonitor {
 
-    private static final String outputDir = "chunks_SHA256_[0-9]";
+    private static final String outputDir = "chunks_CSHAKE128_[0-9]";
     private static final int TEST_HASH_COUNT = 1000;
     private static final boolean printHashResult = false;
-    private static final int comboMaxLength = 10;
-    private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
+    private static final int comboMaxLength = 6;
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
 
     public static void main(String[] args) throws Exception {
+
         DictionarySearch dictionarySearch = new DictionarySearch(outputDir, false);
         Hasher hasher = dictionarySearch.hasher;
         String alphabet = dictionarySearch.converter.getRangeChars();
 
+        long dictSize = dictionarySearch.hashBinarySearch.size();
+
+        // Вычисляем 2^24 точно
+        BigInteger powerOfTwo = BigInteger.valueOf(2).pow(24);
+
+        // Умножаем на размер словаря
+        System.out.println("Словарь : " + outputDir);
+        System.out.println("Колличество уникальных комбинаций в словаре : " + BigInteger.valueOf(dictSize).multiply(powerOfTwo));
+        String maxCombo = "";
+        for (int i = 0; i < comboMaxLength; i++) {
+            maxCombo += alphabet.charAt(alphabet.length()-1);
+        }
+        System.out.println("Тестовые рандомные комбинации от \"" + alphabet.charAt(0) + "\" до \"" + maxCombo + "\"");
         List<String> testHashes = generateTestHashes(hasher, alphabet, TEST_HASH_COUNT);
         System.out.println("⚙\uFE0F Хеши для тестирования сгенерированы\n");
         System.gc();

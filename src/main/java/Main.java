@@ -5,6 +5,7 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import javax.net.ssl.SNIHostName;
 import javax.sound.midi.Soundbank;
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -21,7 +22,7 @@ public class Main {
     public static ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-
+        /*
         System.out.print("\nКонсоль или Телеграмм бот?(0/1): ");
         Scanner scanner = new Scanner(System.in);
         switch (Integer.parseInt(scanner.nextLine())){
@@ -32,60 +33,18 @@ public class Main {
                 startTelegramBot(new DictionarySearch(selectDictionaryFolder(), true));
                 break;
         }
-        /*menuApp(new DictionarySearch(selectDictionaryFolder(), true));
-        ChunkValueEncoding encoding = new ChunkValueEncoding(" ae1ionrls02tmcy9hdu3b8kpg5476vjfwzxAEIONRLSqTMCDBYH!UPGK.JVF W*-#Z_XQ@$?<&,/;ñ'\\%+]=~[●)^(`:ๅ£\"ึçÑ>นภกถฟสหาุıคั่{}áóüดตพรวี้|´ßéöşงจยอะำืเแไ");
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get("rockyou.txt"))) {
-            String line;
-            int lineNumber = 0;
-            int maxBytes = 0;
-            int maxBytesLine;
-            String maxLine;
+        /**/
 
-            while ((line = reader.readLine()) != null) {
-                lineNumber++;
-
-                // Пропускаем пустые строки
-                if (line.trim().isEmpty()) continue;
-
-                try {
-                    byte[] value = encoding.decodeFromString(line);
-                    if (line.equals(encoding.convertToBaseString(value))){
-                        //System.out.println("Строка №" + lineNumber + ": " + line.length() +
-                                //" символов -> " + value.length + " байт");
-                        if (value.length > maxBytes){
-                            maxBytes = value.length;
-                            maxBytesLine = lineNumber;
-                            maxLine = line;
-                            System.out.println(maxBytes + " " + maxBytesLine + " " + maxLine);
-                        }
-                    } else System.out.println("Строка №" + lineNumber + ": Некоректный перевод " + line);
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Ошибка обработки строки №" + lineNumber + ": " + e.getMessage());
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Ошибка чтения файла: " + e.getMessage());
-        }
-
-        /*for (Long i = 1l; i < accessor.getTotalElements(); i++) {
-            byte[] hash1 = hasher.getBinHash(encoding.convertToBaseString(accessor.getElement(i - 1)));
-            byte[] hash2 = hasher.getBinHash(encoding.convertToBaseString(accessor.getElement(i)));
-            if (compareRaw(hash2, hash1) != 1){
-                bag++;
-                System.out.println(bag + " - " + i);
-            }
-        }
-
-        /*String outputDir = "chunks_SHA256_[0-9]";
-        Hasher hasher = new SHA256Hash();
+        String outputDir = selectDictionaryFolder();
+        Hasher hasher = new CSHAKE128();
         String dictionarySymbols = "0123456789";
 
         ChunkValueEncoding chunkValueEncoding = new ChunkValueEncoding(dictionarySymbols);
         HashSortedChunkBuilder builder = new HashSortedChunkBuilder("master_chunk.bin", hasher, chunkValueEncoding);
-        for (int i = getMaxChunkIndex(outputDir) + 1; i < 768; i++) {
+        for (int i = getMaxChunkIndex(outputDir) + 1; i < 60; i++) {
             builder.sortChunkToFile(outputDir, i);
             int maxChunkIndex = getMaxChunkIndex(outputDir);
-            ChunkBinaryFileAccessor chunkBinaryFileAccessor = new ChunkBinaryFileAccessor(outdir +"/chunk_" + maxChunkIndex + ".bin", 3);
+            ChunkBinaryFileAccessor chunkBinaryFileAccessor = new ChunkBinaryFileAccessor(outputDir +"/chunk_" + maxChunkIndex + ".bin", 3);
             System.out.println("Последняя комбинация в чанке " + maxChunkIndex + " : " +
                     chunkValueEncoding.convertToBaseString(chunkBinaryFileAccessor.getElement(chunkBinaryFileAccessor.getTotalElements()-1)));
             System.out.println("Максимальная комбинация в чанке " + maxChunkIndex + " : " +
