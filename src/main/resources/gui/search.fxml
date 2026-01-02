@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://xmlns.javafx.com/javafx/21"
+            xmlns:fx="http://xmlns.javafx.com/fxml/1"
+            fx:controller="gui.SearchController"
+            style="-fx-padding: 20;">
+
+    <top>
+        <Label text="Поиск в словаре" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+    </top>
+
+    <center>
+        <VBox spacing="15" style="-fx-padding: 10;">
+            <!-- Поле ввода хеша -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Хеш:" style="-fx-font-weight: bold;"/>
+                <TextField fx:id="hashField" promptText="Введите хеш..." prefWidth="300"/>
+                <Button text="Искать" onAction="#onSearch"/>
+            </HBox>
+
+            <!-- Индикатор прогресса -->
+            <ProgressBar fx:id="progressBar"
+                         visible="false"
+                         prefWidth="400"
+                         style="-fx-accent: #4CAF50;"/>
+
+            <!-- Область результатов -->
+            <TextArea fx:id="resultArea"
+                      prefHeight="250"
+                      prefWidth="400"
+                      promptText="Результаты поиска..."
+                      wrapText="true"
+                      style="-fx-font-family: monospace;"/>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox spacing="10" alignment="CENTER" style="-fx-padding: 10;">
+            <Button text="Очистить" onAction="#onClear"/>
+            <Button text="Закрыть" onAction="#onClose"/>
+        </HBox>
+    </bottom>
+</BorderPane>

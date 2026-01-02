@@ -6,6 +6,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.math.BigInteger;
 
 public class TelegramBot extends TelegramLongPollingBot {
     private static String BOT_USERNAME;
@@ -76,14 +77,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             String chatId = update.getMessage().getChatId().toString();
             String messageText = update.getMessage().getText();
 
-            if (messageText.equalsIgnoreCase("/status")) {
-                sendResponse(chatId, getStatusMessage());
-                return;
-            }
-
             if (messageText.equalsIgnoreCase("/start")) {
                 sendResponse(chatId,
-                        "❗ Сделал @VanoStrey ❗\n\n" +
+                        "❗ Сделал @foolvan ❗\n\n" +
                                 "Это прототип программы. Пока что набор символов ограничен, " +
                                 "но алгоритм поддерживает любые алфавиты и хеш-функции.\n\n" +
                                 "Проект демонстрирует возможности моментального подбора хеша с использованием бинарного словаря.");
@@ -92,39 +88,94 @@ public class TelegramBot extends TelegramLongPollingBot {
                         "👋 Привет! Отправь мне хеш — и я моментально его взломаю 😈😈😈\n\n" +
                                 "Поддерживаемый алгоритм: " + dictionarySearch.hasher.getName() + "\n\n" +
                                 "Алфавит словаря:\n\n" + dictionarySearch.converter.getRangeChars() + "\n\n" +
-                                "Всего " + formatNumber((long) (dictionarySearch.hashBinarySearch.size() * Math.pow(2, 24))) + " уникальных комбинаций.\n\n" +
+                                "Всего " + formatNumber(String.valueOf(calculateCombinations())) + " уникальных комбинаций.\n\n" +
                                 "Готов к работе 🔥");
                 return;
             }
 
-            long startTime = nowNanos();
+            double startTime = System.nanoTime();
             String result;
             try {
                 result = dictionarySearch.search(messageText);
             } catch (InterruptedException e) {
                 result = "❌ Ошибка: " + e.getMessage();
             }
-            long endTime = nowNanos();
+            double totalTime = System.nanoTime() - startTime;
 
             sendResponse(chatId, result);
-            String elapsedTime = formatElapsedTime(endTime - startTime);
-            sendResponse(chatId, "⏳ Время подбора: " + elapsedTime);
+            sendResponse(chatId, "⏳ Время подбора: " + keepTwoDecimalsSafe(String.valueOf(totalTime / 1_000_000.0)) + " ms");
         }
     }
 
-    public static String formatNumber(long number) {
-        String numberStr = String.valueOf(number);
+    private BigInteger calculateCombinations() {
+        try {
+            // Получаем размер словаря
+            long dictSize = dictionarySearch.hashBinarySearch.size();
+
+            // Вычисляем 2^24 точно
+            BigInteger powerOfTwo = BigInteger.valueOf(2).pow(24);
+
+            // Умножаем на размер словаря
+            return BigInteger.valueOf(dictSize).multiply(powerOfTwo);
+        } catch (Exception e) {
+            // В случае ошибки возвращаем 0
+            return BigInteger.ZERO;
+        }
+    }
+
+    public static String keepTwoDecimalsSafe(String numberStr) {
+        if (numberStr == null || numberStr.isEmpty()) {
+            return numberStr;
+        }
+
+        // Проверяем, что строка — корректное число
+        try {
+            Double.parseDouble(numberStr);
+        } catch (NumberFormatException e) {
+            return numberStr; // или бросить исключение
+        }
+
+        int dotIndex = numberStr.indexOf('.');
+        if (dotIndex == -1) {
+            return numberStr;
+        }
+
+        String integerPart = numberStr.substring(0, dotIndex);
+        String fractionalPart = numberStr.substring(dotIndex + 1);
+
+        if (fractionalPart.length() > 2) {
+            fractionalPart = fractionalPart.substring(0, 2);
+        }
+
+        return integerPart + "." + fractionalPart;
+    }
+
+    public static String formatNumber(String numberStr) {
+        // 1. Проверяем входные данные
+        if (numberStr == null || numberStr.isEmpty()) {
+            return numberStr;
+        }
+
+        // 2. Удаляем ведущие нули (кроме случая "0")
+        numberStr = numberStr.replaceFirst("^0+(?!$)", "");
+
+        // 3. Создаём StringBuilder для результата
         StringBuilder result = new StringBuilder();
 
+        // 4. Проходим по строке с конца, считая цифры
         for (int i = numberStr.length() - 1, count = 0; i >= 0; i--) {
-            result.insert(0, numberStr.charAt(i));
+            result.insert(0, numberStr.charAt(i));  // добавляем цифру в начало
             count++;
+
+            // 5. Добавляем точку-разделитель после каждых 3 цифр (но не в начале)
             if (count % 3 == 0 && i != 0) {
                 result.insert(0, ".");
             }
         }
+
         return result.toString();
     }
+
 
     private void sendResponse(String chatId, String text) {
         SendMessage message = new SendMessage();
@@ -135,57 +186,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
-        }
-    }
-
-    private String getStatusMessage() {
-        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        long totalMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024);
-        String os = System.getProperty("os.name");
-
-        return "📊 *Системный статус*\n" +
-                "💽 Операционная система: " + os + "\n" +
-                "🧠 Память для JVM: " + totalMemoryMB + " МБ\n" +
-                "🧵 Ядер процессора: " + availableProcessors + "\n" +
-                "📦 Размер словаря: 187.6 ГБ (NVMe)";
-    }
-
-    /**
-     * Универсальный таймер: на Android берём SystemClock.elapsedRealtimeNanos(),
-     * на обычной JVM — System.nanoTime().
-     */
-    private static long nowNanos() {
-        try {
-            Class<?> sysClock = Class.forName("android.os.SystemClock");
-            return (long) sysClock.getMethod("elapsedRealtimeNanos").invoke(null);
-        } catch (Exception e) {
-            return System.nanoTime();
-        }
-    }
-
-    /**
-     * Форматирует время:
-     * - для ПК: до 2 знаков после запятой (мс)
-     * - для Android: целое значение (мс)
-     */
-    private static String formatElapsedTime(long nanos) {
-        double elapsedMs = nanos / 1_000_000.0;
-
-        // Проверка, что мы на Android
-        if (isAndroid()) {
-            return String.format("%d мс", Math.round(elapsedMs)); // округляем до целых
-        } else {
-            return String.format("%.2f мс", elapsedMs); // точность до 2 знаков
-        }
-    }
-
-    private static boolean isAndroid() {
-        try {
-            // Если это Android, то класс android.os.SystemClock будет найден
-            Class.forName("android.os.SystemClock");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false; // Не Android
         }
     }
 }

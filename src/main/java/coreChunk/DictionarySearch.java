@@ -8,104 +8,126 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DictionarySearch {
     public ArrayList<HashBinarySearch> hashBinarySearch = new ArrayList<>();
-    private String dictionaryDir;
+    private final String dictionaryDir;
     public ChunkValueEncoding converter;
     public Hasher hasher;
-    private AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
-    private  boolean printLog;
+    private final boolean printLog;
+    private final long RANGE = 8192;
+    
+    // Кэшированный пул потоков
+    private final ExecutorService executor;
+    private static final ThreadFactory THREAD_FACTORY = r -> {
+        Thread t = new Thread(r, "DictionarySearch-" + System.currentTimeMillis());
+        t.setDaemon(true);
+        return t;
+    };
 
     public DictionarySearch(String dictionaryDir, boolean printLog) throws IOException {
         Path metadataPath = Paths.get(dictionaryDir, "metadata.json");
         String metadataContent = Files.readString(metadataPath);
         JSONObject meta = new JSONObject(metadataContent);
 
-        String symbols = meta.getString("dictionary_symbols");
-        String hashAlg = meta.getString("hash_algorithm");
-        Integer elementSize = meta.getInt("element_size");
-
-        this.converter = new ChunkValueEncoding(symbols);
-        this.hasher = HasherFactory.getHasher(hashAlg);
+        this.converter = new ChunkValueEncoding(meta.getString("dictionary_symbols"));
+        this.hasher = HasherFactory.getHasher(meta.getString("hash_algorithm"));
         this.dictionaryDir = dictionaryDir;
         this.printLog = printLog;
 
-        initChunkSearch(elementSize);
+        initChunkSearch();
+        
+        // Создаем пул потоков ПОСЛЕ загрузки чанков, чтобы знать их количество
+        int processors = Runtime.getRuntime().availableProcessors();
+        int chunkCount = hashBinarySearch.size();
+        
+        // Используем неограниченную очередь, чтобы избежать проблемы с емкостью 0
+        this.executor = new ThreadPoolExecutor(
+            processors, // corePoolSize
+            processors, // maximumPoolSize
+            60L, TimeUnit.SECONDS, // keepAliveTime
+            new LinkedBlockingQueue<>(), // Без ограничения емкости
+            THREAD_FACTORY,
+            new ThreadPoolExecutor.CallerRunsPolicy()
+        );
     }
-
+    
     public String search(String hash) throws InterruptedException {
-        if (hash.length() != hasher.getHash("12345").length()){
+        if (hash.length() != hasher.getHash("").length()) {
             return "invalid hash type, use " + hasher.getName();
         }
-        AtomicReference<String> foundResult = new AtomicReference<>();
-        AtomicReference<Integer> chunkIndex = new AtomicReference<>(-1); // Для хранения индекса чанка
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        List<Future<?>> futures = new ArrayList<>();
-        if (printLog){
-            System.out.println("🔍 Начинаем поиск хеша: " + hash);
-        }
 
-        // Запускаем параллельные задачи для поиска в чанках
+        byte[] target = hasher.hexToBytes(hash);
+        
+        if (printLog) System.out.println("🔍 Поиск хеша: " + hash);
+
+        double startTime = System.nanoTime();
+
+        // первые 3 байта хеша сами по себе являются индексом для пресказания расположения в чанке
+        long predicted = ((target[0] & 0xFFL) << 16) |
+                ((target[1] & 0xFFL) << 8) |
+                (target[2] & 0xFFL);
+
+        long low = Math.max(0, predicted - RANGE);
+        long high = Math.min((1L << 24) - 1, predicted + RANGE);
+
+        if (printLog) System.out.println("📍 Единое предсказание для всех чанков: " + predicted);
+
+        // Используем существующий executor вместо создания нового
+        List<Future<SearchResult>> futures = new ArrayList<>();
+        AtomicBoolean found = new AtomicBoolean(false);
+
         for (int i = 0; i < hashBinarySearch.size(); i++) {
-            final int index = i;
+            final int currentChunk = i;
+
             futures.add(executor.submit(() -> {
-                if (foundResult.get() != null) return; // Если результат уже найден, завершаем задачу
-                String result = null;
+                if (found.get()) return new SearchResult(currentChunk, "");
                 try {
-                    result = hashBinarySearch.get(index).search(hash); // Ищем в чанке
-                    if (result != null && !result.isEmpty()) {
-                        foundResult.compareAndSet(null, result); // Сохраняем результат
-                        chunkIndex.compareAndSet(-1, index); // Сохраняем индекс чанка, где был найден хеш
-                        if (printLog){
-                            System.out.println("✅ Хеш найден в чанке: chunk_" + index + ".bin");
-                        }
+                    String result = hashBinarySearch.get(currentChunk).search(hash, low, high);
+                    if (!result.isEmpty()) {
+                        found.set(true);
+                        return new SearchResult(currentChunk, result);
                     }
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
+                return new SearchResult(currentChunk, "");
             }));
         }
 
-        // Ждём завершения всех потоков
-        for (Future<?> f : futures) {
+        // НЕ закрываем executor после использования!
+
+        for (Future<SearchResult> future : futures) {
             try {
-                f.get();
+                SearchResult result = future.get();
+                if (result != null && !result.result.isEmpty()) {
+                    double totalTime = System.nanoTime() - startTime;
+                    if (printLog) {
+                        System.out.println("✅ Найдено в чанке " + result.chunkIndex +
+                                         " за " + String.format("%.2f", totalTime / 1_000_000.0) + " ms");
+                    }
+                    return result.result;
+                }
             } catch (ExecutionException e) {
                 e.printStackTrace();
             }
         }
 
-        executor.shutdown();
+        if (printLog) System.out.println("❌ Хеш не найден за " + (System.nanoTime() - startTime / 1_000_000.0) + " ms");
+        return "hash not found";
+    }
 
-        // Проверка на успешный поиск и корректный индекс
-        if (foundResult.get() != null && chunkIndex.get() != -1) { // Если результат найден и индекс валиден
-            int currentChunkIndex = chunkIndex.get(); // Сохраняем текущий индекс
-            chunkIndex.set(-1); // Сбрасываем индекс чанка для следующего поиска
-            if (printLog){
-                return foundResult.get() + "\n\n🔍 Found in chunk_" + currentChunkIndex + ".bin";
-            } else {
-                return foundResult.get();
-            }
-        } else {
-            return "hash not found";  // Если хеш не найден, выводим это сообщение
+    private void initChunkSearch() throws IOException {
+        Integer elementSize = 3;
+        if (printLog) {
+            System.out.println("🧠 Инициализация и прогрев чанков...");
         }
-    }
-
-
-    public String getFoundChunkInfo() {
-        return "chunk_" + chunkIndex.get() + ".bin";  // Возвращаем название чанка
-    }
-
-    private void initChunkSearch(Integer elemetSize) throws IOException {
-        System.out.println("🧠 Инициализация и прогрев чанков...");
 
         for (Path chunkPath : findAllChunkPaths()) {
             String path = chunkPath.toString();
 
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path, elemetSize);
+            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path, elementSize);
             HashBinarySearch search = new HashBinarySearch(accessor, converter, hasher);
             hashBinarySearch.add(search);
 
@@ -122,17 +144,19 @@ public class DictionarySearch {
                 byte[] el = accessor.getElement(offset);
                 if (el == null) continue;
                 String encoded = converter.convertToBaseString(el);
-                byte[] hash = hasher.getBinHash(encoded);
-                hash[0] ^= el[0];
+                byte[] hashBytes = hasher.getBinHash(encoded);
+                hashBytes[0] ^= el[0]; // Фиктивная операция для прогрева
             }
         }
 
         System.gc();
-        System.out.println("✅ Система прогрета и готова к работе\n");
+        if (printLog) {
+            System.out.println("✅ Система прогрета и готова к работе\n");
+        }
     }
 
     private List<Path> findAllChunkPaths() throws IOException {
-        try (Stream<Path> stream = Files.list(Paths.get(dictionaryDir))) {
+        try (var stream = Files.list(Paths.get(dictionaryDir))) {
             return stream
                     .filter(path -> path.getFileName().toString().matches("chunk_\\d+\\.bin"))
                     .sorted(Comparator.comparingInt(p ->
@@ -141,6 +165,31 @@ public class DictionarySearch {
                                     .replace(".bin", "")))
                     )
                     .toList();
+        }
+    }
+
+    private static class SearchResult {
+        final int chunkIndex;
+        final String result;
+        
+        SearchResult(int chunkIndex, String result) {
+            this.chunkIndex = chunkIndex;
+            this.result = result;
+        }
+    }
+    
+    // Добавим метод shutdown для корректного завершения приложения
+    public void shutdown() {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }

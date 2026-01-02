@@ -5,27 +5,42 @@ import hashFunc.*;
 
 import java.io.IOException;
 import java.lang.management.*;
+import java.math.BigInteger;
 import java.nio.file.*;
 import java.text.DecimalFormat;
 import java.util.*;
 
 public class BatchPerformanceMonitor {
 
-    private static final String outputDir = "chunks_SHA256_[0-9]";
+    private static final String outputDir = "chunks_CSHAKE128_[0-9]";
     private static final int TEST_HASH_COUNT = 1000;
     private static final boolean printHashResult = false;
-    private static final int comboMaxLength = 10;
-    private static final List<HashBinarySearch> hashSearches = new ArrayList<>();
+    private static final int comboMaxLength = 6;
     private static final DecimalFormat fmt = new DecimalFormat("0.00");
 
     public static void main(String[] args) throws Exception {
+
         DictionarySearch dictionarySearch = new DictionarySearch(outputDir, false);
         Hasher hasher = dictionarySearch.hasher;
         String alphabet = dictionarySearch.converter.getRangeChars();
 
+        long dictSize = dictionarySearch.hashBinarySearch.size();
+
+        // Вычисляем 2^24 точно
+        BigInteger powerOfTwo = BigInteger.valueOf(2).pow(24);
+
+        // Умножаем на размер словаря
+        System.out.println("Словарь : " + outputDir);
+        System.out.println("Колличество уникальных комбинаций в словаре : " + BigInteger.valueOf(dictSize).multiply(powerOfTwo));
+        String maxCombo = "";
+        for (int i = 0; i < comboMaxLength; i++) {
+            maxCombo += alphabet.charAt(alphabet.length()-1);
+        }
+        System.out.println("Тестовые рандомные комбинации от \"" + alphabet.charAt(0) + "\" до \"" + maxCombo + "\"");
         List<String> testHashes = generateTestHashes(hasher, alphabet, TEST_HASH_COUNT);
         System.out.println("⚙\uFE0F Хеши для тестирования сгенерированы\n");
-        System.gc(); Thread.sleep(100);
+        System.gc();
+        Thread.sleep(100);
         Runtime runtime = Runtime.getRuntime();
         ThreadMXBean tm = ManagementFactory.getThreadMXBean();
         if (tm.isThreadCpuTimeSupported() && !tm.isThreadCpuTimeEnabled()) {
@@ -33,8 +48,6 @@ public class BatchPerformanceMonitor {
         }
 
         Map<Long, Long> cpuBefore = snapshotCpuTime(tm);
-        long memBeforeAll = runtime.totalMemory() - runtime.freeMemory();
-        long wallStartAll = System.nanoTime();
 
         double totalWall = 0;
         double totalRam = 0;
@@ -60,9 +73,6 @@ public class BatchPerformanceMonitor {
             totalRam += ramMb;
             if (result.equals("hash not found")) lossHash++;
         }
-
-        long wallEndAll = System.nanoTime();
-        long memAfterAll = runtime.totalMemory() - runtime.freeMemory();
         Map<Long, Long> cpuAfter = snapshotCpuTime(tm);
 
         double avgWall = totalWall / TEST_HASH_COUNT;
@@ -106,30 +116,6 @@ public class BatchPerformanceMonitor {
             hashes.add(hasher.getHash(sb.toString()));
         }
         return hashes;
-    }
-
-    private static void initChunkSearch(String dictionaryDir, ChunkValueEncoding converter, Hasher sha256) throws IOException {
-        System.out.println("🧠 Инициализация и прогрев чанков...");
-        for (int i = 0; i < 356; i++) {
-            String path = dictionaryDir + "/chunk_" + i + ".bin";
-            if (!Files.exists(Path.of(path))) continue;
-
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor(path, 3);
-            HashBinarySearch search = new HashBinarySearch(accessor, converter, sha256);
-            hashSearches.add(search);
-
-            long total = accessor.getTotalElements();
-            long[] offsets = { 0, total / 3, total * 2 / 3, total - 1 };
-            for (long offset : offsets) {
-                byte[] el = accessor.getElement(offset);
-                if (el == null) continue;
-                String enc = converter.convertToBaseString(el);
-                byte[] hash = sha256.getBinHash(enc);
-                hash[0] ^= el[0];
-            }
-        }
-        System.gc();
-        System.out.println("✅ Система готова к работе\n");
     }
 
     private static Map<Long, Long> snapshotCpuTime(ThreadMXBean tm) {
