@@ -10,6 +10,7 @@ public class HasherFactory {
             case "BLAKE3" -> new BLAKE3Hash();
             case "SHAKE128" -> new SHAKE128();
             case "CSHAKE128" -> new CSHAKE128();
+            case "CRC32" -> new CRC32Hash();
             default -> throw new IllegalArgumentException("⛔ Неизвестный алгоритм хеширования: " + name);
         };
     }

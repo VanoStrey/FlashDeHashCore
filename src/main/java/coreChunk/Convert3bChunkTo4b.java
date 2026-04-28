@@ -1,7 +1,6 @@
 package coreChunk;
 
-import hashFunc.Hasher;
-import hashFunc.SHA256Hash;
+import hashFunc.*;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -28,14 +27,14 @@ public class Convert3bChunkTo4b {
 
     public static void main(String[] args) throws Exception {
 
-        Hasher hasher = new SHA256Hash();
+        Hasher hasher = new CRC32Hash();
         String dictionarySymbols = "0123456789";
         ChunkValueEncoding encoding = new ChunkValueEncoding(dictionarySymbols);
 
         // ---------- 1) Глобальные min/max ----------
         byte[] hashMax = null;
-        for (int i = 256; i < 512; i++) {
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor("chunks_SHA256_[0-9]/chunk_" + i + ".bin", 3);
+        for (int i = 0; i < 256; i++) {
+            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor("chunks_CRC32_[0-9]/chunk_" + i + ".bin", 3);
             byte[] last = accessor.getElement(accessor.getTotalElements() - 1);
             byte[] maxHash = hasher.getBinHash(encoding.convertToBaseString(last));
             if (hashMax == null || compareHashes(hashMax, maxHash) < 0) hashMax = maxHash;
@@ -43,8 +42,8 @@ public class Convert3bChunkTo4b {
         System.out.println("GLOBAL MAX = " + hasher.bytesToHex(hashMax));
 
         byte[] hashMin = null;
-        for (int i = 256; i < 512; i++) {
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor("chunks_SHA256_[0-9]/chunk_" + i + ".bin", 3);
+        for (int i = 0; i < 256; i++) {
+            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor("chunks_CRC32_[0-9]/chunk_" + i + ".bin", 3);
             byte[] first = accessor.getElement(0);
             byte[] minHash = hasher.getBinHash(encoding.convertToBaseString(first));
             if (hashMin == null || compareHashes(hashMin, minHash) > 0) hashMin = minHash;
@@ -80,10 +79,10 @@ public class Convert3bChunkTo4b {
         // ranksIndexesChunks[i] = [0, idx_0, idx_1, ..., idx_255] для чанка i
         ArrayList<ArrayList<Long>> ranksIndexesChunks = new ArrayList<>();
 
-        for (int i = 256; i < 512; i++) {
+        for (int i = 0; i < 256; i++) {
             ArrayList<Long> ranksIndexes = new ArrayList<>();
             ranksIndexes.add(0L); // старт
-            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor("chunks_SHA256_[0-9]/chunk_" + i + ".bin", 3);
+            ChunkBinaryFileAccessor accessor = new ChunkBinaryFileAccessor("chunks_CRC32_[0-9]/chunk_" + i + ".bin", 3);
 
             for (String hashRank : hashRanks) {
                 byte[] targetHash = hasher.hexToBytes(hashRank);
@@ -95,7 +94,7 @@ public class Convert3bChunkTo4b {
         }
 
         // ---------- 4) Для каждого выходного чанка j делаем k-way merge ----------
-        Path outPath = Paths.get("chunks4_SHA256_[0-9]", "chunk_1.bin");
+        Path outPath = Paths.get("chunks4_CRC32_[0-9]", "chunk_0.bin");
         Path folder = outPath.getParent();
         if (!Files.exists(folder)) {
             Files.createDirectories(folder);
@@ -128,7 +127,7 @@ public class Convert3bChunkTo4b {
                     totalRangeCount += Math.max(0, end - start);
 
                     if (start < end) {
-                        accessors[i] = new ChunkBinaryFileAccessor("chunks_SHA256_[0-9]/chunk_" + (i + 256) + ".bin", 3);
+                        accessors[i] = new ChunkBinaryFileAccessor("chunks_CRC32_[0-9]/chunk_" + (i) + ".bin", 3);
                         long pos = start;
 
                         byte[] raw = accessors[i].getElement(pos);
