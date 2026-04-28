@@ -38,7 +38,6 @@ build/
 .DS_Store
 
 # Dictionaris
-*chunk**
 
 
 *.json
